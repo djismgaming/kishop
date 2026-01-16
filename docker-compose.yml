@@ -1,7 +1,7 @@
 services:
-  kicart:
+  kishop:
     build: .
-    container_name: kicart
+    container_name: kishop
     restart: unless-stopped
     ports:
       # - "${HTTP_PORT:-80}:80"
@@ -13,8 +13,10 @@ services:
       - HTTP_PORT=${HTTP_PORT:-80}
       - HTTPS_PORT=${HTTPS_PORT:-443}
     networks:
-      - kicart-network
+      - kishop-network
 
 networks:
-  kicart-network:
-    driver: bridge
+  default:
+    name: linuxserver
+    external: true
+      

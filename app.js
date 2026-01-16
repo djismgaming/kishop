@@ -1,5 +1,5 @@
 const TAX_RATE = 0.115;
-const STORAGE_KEY = 'kicart_data';
+const STORAGE_KEY = 'kishop_data';
 
 let appData = {
   maxBudget: 0,
