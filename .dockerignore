@@ -3,7 +3,6 @@
 node_modules
 .env
 .env.example
-README.md
 AGENTS.md
 Dockerfile
 docker-compose.yml
