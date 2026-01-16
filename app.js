@@ -125,13 +125,16 @@ function createItemElement(item, index) {
   qtyInput.addEventListener('input', () => {
     appData.items[index].quantity = qtyInput.value;
     saveData();
-    sortItems();
-    renderList();
+    updateTotalsDisplay();
+  });
+
+  priceInput.addEventListener('input', () => {
+    appData.items[index].price = priceInput.value;
+    saveData();
+    updateTotalsDisplay();
   });
 
   priceInput.addEventListener('blur', () => {
-    appData.items[index].price = priceInput.value;
-    saveData();
     sortItems();
     renderList();
   });
@@ -179,7 +182,7 @@ function renderList() {
 }
 
 function addEmptyRow() {
-  appData.items.push({ quantity: '', price: '' });
+  appData.items.push({ quantity: '1', price: '' });
   saveData();
   renderList();
   updateTotalsDisplay();
