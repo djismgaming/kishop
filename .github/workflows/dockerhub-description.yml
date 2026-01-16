@@ -6,7 +6,6 @@ on:
     paths:
       - README.md
       - .github/workflows/dockerhub-description.yml
-    tags: [v*] # Trigger only on tag pushes (e.g., v1.0.0, v2.3.1)
   workflow_dispatch: # Allows manual runs
 
 jobs:
