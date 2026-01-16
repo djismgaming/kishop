@@ -10,3 +10,4 @@ docker-compose.yml
 convert-icon.js
 nul
 .dockerignore
+README.md
