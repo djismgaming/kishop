@@ -134,6 +134,11 @@ No linting or test commands are configured.
 - Warning class at 75%, danger at 100%
 - Update classList on footer element
 
+**Total Calculations:**
+- `totalQty` only includes items with a price > 0
+- `subtotal` and `grandTotal` include all items regardless of price
+- Tax rate: `TAX_RATE = 0.115` (11.5%)
+
 **PWA Features:**
 - Manifest: `manifest.json`
 - Icons: Multiple sizes for Apple devices

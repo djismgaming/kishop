@@ -36,7 +36,9 @@ function calculateTotals() {
   appData.items.forEach(item => {
     const qty = parseFloat(item.quantity) || 0;
     const price = parseFloat(item.price) || 0;
-    totalQty += qty;
+    if (price > 0) {
+      totalQty += qty;
+    }
     subtotal += qty * price;
   });
 
