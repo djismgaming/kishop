@@ -38,5 +38,4 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PAT }}
-          repository: ${{ secrets.DOCKER_USER }}/kishop
-          readme-filepath: README.md
+          repository: djismgaming/kishop
