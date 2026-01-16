@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>KICart - Shopping List</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <header class="budget-section">
+      <label for="max-budget">Max Subtotal:</label>
+      <div class="budget-input-wrapper">
+        <span class="currency-symbol">$</span>
+        <input 
+          type="number" 
+          id="max-budget" 
+          inputmode="decimal" 
+          placeholder="0.00" 
+          step="0.01"
+          min="0"
+        >
+      </div>
+    </header>
+
+    <main class="shopping-list-container">
+      <div class="list-header">
+        <div class="col-qty">Qty</div>
+        <div class="col-price">Price</div>
+        <div class="col-action"></div>
+      </div>
+      <div id="shopping-list" class="shopping-list"></div>
+    </main>
+
+    <footer class="totals-panel">
+      <div class="totals-grid">
+        <div class="total-item">
+          <div class="total-label">Items</div>
+          <div class="total-value" id="total-qty">0</div>
+        </div>
+        <div class="total-item">
+          <div class="total-label">Subtotal</div>
+          <div class="total-value" id="subtotal">$0.00</div>
+        </div>
+        <div class="total-item">
+          <div class="total-label">Total (Tax 11.5%)</div>
+          <div class="total-value" id="grand-total">$0.00</div>
+        </div>
+      </div>
+      <button id="clear-all" class="clear-btn">Clear All</button>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
