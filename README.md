@@ -1,4 +1,4 @@
-# KICart - Mobile Shopping List
+# KiShop - Mobile Shopping List
 
 A mobile-first web app for managing shopping lists and calculating totals with tax.
 
