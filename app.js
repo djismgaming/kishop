@@ -67,24 +67,6 @@ function updateTotalsDisplay() {
   }
 }
 
-function sortItems() {
-  appData.items.sort((a, b) => {
-    const aHasPrice = a.price && parseFloat(a.price) > 0;
-    const bHasPrice = b.price && parseFloat(b.price) > 0;
-    
-    if (!aHasPrice && bHasPrice) return -1;
-    if (aHasPrice && !bHasPrice) return 1;
-    
-    const aQty = parseFloat(a.quantity) || 0;
-    const bQty = parseFloat(b.quantity) || 0;
-    if (aQty !== bQty) return bQty - aQty;
-    
-    const aPrice = parseFloat(a.price) || 0;
-    const bPrice = parseFloat(b.price) || 0;
-    return bPrice - aPrice;
-  });
-}
-
 function createItemElement(item, index) {
   const div = document.createElement('div');
   div.className = 'list-item';
@@ -135,7 +117,6 @@ function createItemElement(item, index) {
   });
 
   priceInput.addEventListener('blur', () => {
-    sortItems();
     renderList();
   });
 
