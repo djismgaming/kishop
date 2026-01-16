@@ -129,19 +129,23 @@ function createItemElement(item, index) {
     renderList();
   });
 
-  priceInput.addEventListener('input', () => {
+  priceInput.addEventListener('blur', () => {
     appData.items[index].price = priceInput.value;
     saveData();
     sortItems();
     renderList();
   });
 
-  qtyInput.addEventListener('focus', () => {
-    qtyInput.select();
+  qtyInput.addEventListener('focus', (e) => {
+    if (e.relatedTarget !== null) {
+      qtyInput.select();
+    }
   });
 
-  priceInput.addEventListener('focus', () => {
-    priceInput.select();
+  priceInput.addEventListener('focus', (e) => {
+    if (e.relatedTarget !== null) {
+      priceInput.select();
+    }
   });
 
   deleteBtn.addEventListener('click', () => {
