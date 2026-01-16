@@ -29,6 +29,6 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ${{ secrets.DOCKER_USER }}/karismcart:latest
-            ${{ secrets.DOCKER_USER }}/karismcart:${{ steps.extract_version.outputs.version }}
+            ${{ secrets.DOCKER_USER }}/kishop:latest
+            ${{ secrets.DOCKER_USER }}/kishop:${{ steps.extract_version.outputs.version }}
           outputs: type=image,name=target,annotation-index.created=${{ github.event.head_commit.timestamp }}
