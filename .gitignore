@@ -10,3 +10,4 @@ build/
 .nyc_output
 coverage/
 .cache
+nul
