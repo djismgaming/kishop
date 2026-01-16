@@ -1,0 +1,19 @@
+services:
+  kicart:
+    build: .
+    container_name: kicart
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    environment:
+      - HTTP_PORT=${HTTP_PORT:-80}
+      - HTTPS_PORT=${HTTPS_PORT:-443}
+    networks:
+      - kicart-network
+
+networks:
+  kicart-network:
+    driver: bridge

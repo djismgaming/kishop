@@ -29,6 +29,38 @@ A mobile-first web app for managing shopping lists and calculating totals with t
 - localStorage for data persistence
 - Fixed 11.5% tax rate
 
+## Docker Deployment
+
+### Quick Start
+
+```bash
+# Copy environment file
+cp .env.example .env
+
+# Edit ports in .env if needed (default: HTTP=8080, HTTPS=8443)
+
+# Build and run
+docker compose up -d
+
+# Stop
+docker compose down
+```
+
+### Custom Ports
+
+Edit `.env` file:
+
+```
+HTTP_PORT=3000
+HTTPS_PORT=3443
+```
+
+Then restart:
+
+```bash
+docker compose up -d --force-recreate
+```
+
 ## Browser Support
 
 Works on all modern browsers (Chrome, Firefox, Safari, Edge)
