@@ -283,6 +283,20 @@ function clearAll() {
   }
 }
 
+async function refreshData() {
+  const refreshBtn = document.getElementById('refresh-btn');
+  refreshBtn.classList.add('pulsing');
+  
+  await loadData();
+  renderList();
+  updateTotalsDisplay();
+  ensureEmptyRow();
+  
+  setTimeout(() => {
+    refreshBtn.classList.remove('pulsing');
+  }, 1000);
+}
+
 async function migrateFromLocalStorage() {
   try {
     const saved = localStorage.getItem('kishop_data');
@@ -326,6 +340,7 @@ async function init() {
   document.addEventListener('keydown', handleKeyPress);
 
   document.getElementById('clear-all').addEventListener('click', clearAll);
+  document.getElementById('refresh-btn').addEventListener('click', refreshData);
 
   renderList();
   updateTotalsDisplay();
