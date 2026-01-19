@@ -1,4 +1,9 @@
 node_modules
+data/
+data;C
+*.db
+*.db-shm
+*.db-wal
 .DS_Store
 *.log
 .env

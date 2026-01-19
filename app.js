@@ -1,28 +1,82 @@
 const TAX_RATE = 0.115;
-const STORAGE_KEY = 'kishop_data';
+const API_BASE = '/api';
 
 let appData = {
   maxBudget: 0,
   items: []
 };
 
-function loadData() {
+async function loadBudget() {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      appData = JSON.parse(saved);
+    const response = await fetch(`${API_BASE}/budget`);
+    if (response.ok) {
+      const data = await response.json();
+      appData.maxBudget = data.maxBudget;
     }
   } catch (e) {
-    console.error('Error loading data:', e);
+    console.error('Error loading budget:', e);
   }
 }
 
-function saveData() {
+async function loadItems() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+    const response = await fetch(`${API_BASE}/items`);
+    if (response.ok) {
+      const data = await response.json();
+      appData.items = data.items;
+    }
   } catch (e) {
-    console.error('Error saving data:', e);
+    console.error('Error loading items:', e);
   }
+}
+
+async function loadData() {
+  await Promise.all([loadBudget(), loadItems()]);
+}
+
+function saveBudget(value) {
+  appData.maxBudget = value;
+  updateTotalsDisplay();
+  fetch(`${API_BASE}/budget`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ maxBudget: value })
+  }).catch(e => console.error('Error saving budget:', e));
+}
+
+function saveItem(index, field, value) {
+  appData.items[index][field] = value;
+  updateTotalsDisplay();
+  const item = appData.items[index];
+  if (item.id) {
+    fetch(`${API_BASE}/items/${item.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(item)
+    }).catch(e => console.error('Error saving item:', e));
+  }
+}
+
+function saveNewItem(item) {
+  fetch(`${API_BASE}/items`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(item)
+  }).then(async response => {
+    if (response.ok) {
+      const data = await response.json();
+      const lastItem = appData.items[appData.items.length - 1];
+      if (lastItem) {
+        lastItem.id = data.id;
+      }
+    }
+  }).catch(e => console.error('Error adding item:', e));
+}
+
+function deleteItem(id) {
+  fetch(`${API_BASE}/items/${id}`, {
+    method: 'DELETE'
+  }).catch(e => console.error('Error deleting item:', e));
 }
 
 function formatCurrency(amount) {
@@ -107,15 +161,11 @@ function createItemElement(item, index) {
   const deleteBtn = div.querySelector('.delete-btn');
 
   qtyInput.addEventListener('input', () => {
-    appData.items[index].quantity = qtyInput.value;
-    saveData();
-    updateTotalsDisplay();
+    saveItem(index, 'quantity', qtyInput.value);
   });
 
   priceInput.addEventListener('input', () => {
-    appData.items[index].price = priceInput.value;
-    saveData();
-    updateTotalsDisplay();
+    saveItem(index, 'price', priceInput.value);
   });
 
   priceInput.addEventListener('blur', () => {
@@ -135,8 +185,11 @@ function createItemElement(item, index) {
   });
 
   deleteBtn.addEventListener('click', () => {
+    const item = appData.items[index];
     appData.items.splice(index, 1);
-    saveData();
+    if (item.id) {
+      deleteItem(item.id);
+    }
     renderList();
     updateTotalsDisplay();
   });
@@ -165,10 +218,11 @@ function renderList() {
 }
 
 function addEmptyRow() {
-  appData.items.push({ quantity: '1', price: '' });
-  saveData();
+  const item = { quantity: '1', price: '' };
+  appData.items.push(item);
   renderList();
   updateTotalsDisplay();
+  saveNewItem(item);
 
   const listContainer = document.getElementById('shopping-list');
   const lastItem = listContainer.lastElementChild;
@@ -220,24 +274,52 @@ function handleKeyPress(e) {
 
 function clearAll() {
   if (confirm('Are you sure you want to clear all items?')) {
+    const itemIds = appData.items.filter(item => item.id).map(item => item.id);
     appData.items = [];
-    saveData();
+    itemIds.forEach(id => deleteItem(id));
     renderList();
     updateTotalsDisplay();
     addEmptyRow();
   }
 }
 
-function init() {
-  loadData();
+async function migrateFromLocalStorage() {
+  try {
+    const saved = localStorage.getItem('kishop_data');
+    if (saved) {
+      const data = JSON.parse(saved);
+      if (data.items && data.items.length > 0) {
+        console.log('Migrating data from localStorage...');
+        await fetch(`${API_BASE}/items`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: data.items })
+        });
+        if (data.maxBudget !== undefined) {
+          await fetch(`${API_BASE}/budget`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ maxBudget: data.maxBudget })
+          });
+        }
+        localStorage.removeItem('kishop_data');
+        console.log('Migration complete');
+      }
+    }
+  } catch (e) {
+    console.error('Error migrating data:', e);
+  }
+}
+
+async function init() {
+  await migrateFromLocalStorage();
+  await loadData();
 
   const maxBudgetInput = document.getElementById('max-budget');
   maxBudgetInput.value = appData.maxBudget || '';
 
   maxBudgetInput.addEventListener('input', () => {
-    appData.maxBudget = maxBudgetInput.value;
-    saveData();
-    updateTotalsDisplay();
+    saveBudget(maxBudgetInput.value);
   });
 
   document.addEventListener('click', handleListClick);
