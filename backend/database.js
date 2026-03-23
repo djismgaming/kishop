@@ -5,6 +5,10 @@ const DB_PATH = process.env.DB_PATH || '/data/shopping.db';
 
 let db;
 
+/**
+ * Initialize the SQLite database connection and create required tables
+ * @returns {Promise<void>} Promise that resolves when database is initialized
+ */
 function initDatabase() {
   return new Promise((resolve, reject) => {
     db = new sqlite3.Database(DB_PATH, (err) => {
@@ -46,6 +50,10 @@ function initDatabase() {
   });
 }
 
+/**
+ * Ensure initial data exists in the shopping_data table
+ * @returns {Promise<void>} Promise that resolves when initial data is ensured
+ */
 function ensureInitialData() {
   return new Promise((resolve, reject) => {
     db.get('SELECT id FROM shopping_data WHERE id = 1', (err, row) => {
@@ -65,6 +73,11 @@ function ensureInitialData() {
   });
 }
 
+/**
+ * Retrieve the maximum budget value from the database
+ * @param {Function} callback - Callback function with error and budget parameters
+ * @returns {void}
+ */
 function getBudget(callback) {
   db.get('SELECT max_budget FROM shopping_data WHERE id = 1', (err, row) => {
     if (err) callback(err);
@@ -72,6 +85,12 @@ function getBudget(callback) {
   });
 }
 
+/**
+ * Update the maximum budget value in the database
+ * @param {number} maxBudget - The new maximum budget value
+ * @param {Function} callback - Callback function with error parameter
+ * @returns {void}
+ */
 function updateBudget(maxBudget, callback) {
   db.run('UPDATE shopping_data SET max_budget = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1', [maxBudget], function(err) {
     if (err) callback(err);
@@ -79,6 +98,11 @@ function updateBudget(maxBudget, callback) {
   });
 }
 
+/**
+ * Retrieve all shopping items from the database
+ * @param {Function} callback - Callback function with error and items array parameters
+ * @returns {void}
+ */
 function getItems(callback) {
   db.all('SELECT id, quantity, price, name, position, completed FROM shopping_items ORDER BY position ASC', (err, rows) => {
     if (err) callback(err);
@@ -86,6 +110,12 @@ function getItems(callback) {
   });
 }
 
+/**
+ * Add a new shopping item to the database
+ * @param {Object} item - Item object with quantity and price properties
+ * @param {Function} callback - Callback function with error and lastID parameters
+ * @returns {void}
+ */
 function addItem(item, callback) {
   const stmt = db.prepare('INSERT INTO shopping_items (quantity, price, position) SELECT ?, ?, COALESCE(MAX(position), -1) + 1 FROM shopping_items');
   stmt.run([item.quantity, item.price], function(err) {
@@ -95,6 +125,13 @@ function addItem(item, callback) {
   stmt.finalize();
 }
 
+/**
+ * Update an existing shopping item in the database
+ * @param {number} id - The ID of the item to update
+ * @param {Object} item - Object with optional quantity, price, name, completed properties
+ * @param {Function} callback - Callback function with error and changes count parameters
+ * @returns {void}
+ */
 function updateItem(id, item, callback) {
   const updates = [];
   const values = [];
@@ -128,6 +165,12 @@ function updateItem(id, item, callback) {
   });
 }
 
+/**
+ * Delete a shopping item from the database by ID
+ * @param {number} id - The ID of the item to delete
+ * @param {Function} callback - Callback function with error parameter
+ * @returns {void}
+ */
 function deleteItem(id, callback) {
   db.run('DELETE FROM shopping_items WHERE id = ?', [id], function(err) {
     if (err) callback(err);
@@ -135,6 +178,12 @@ function deleteItem(id, callback) {
   });
 }
 
+/**
+ * Bulk update all shopping items by replacing existing items with new ones
+ * @param {Array} items - Array of item objects with quantity, price, and position properties
+ * @param {Function} callback - Callback function with error parameter
+ * @returns {void}
+ */
 function bulkUpdateItems(items, callback) {
   db.serialize(() => {
     db.run('DELETE FROM shopping_items', (err) => {
@@ -167,6 +216,12 @@ function bulkUpdateItems(items, callback) {
   });
 }
 
+/**
+ * Bulk update positions for shopping items
+ * @param {Array} positions - Array of objects with id and position properties
+ * @param {Function} callback - Callback function with error parameter
+ * @returns {void}
+ */
 function bulkUpdatePositions(positions, callback) {
   db.serialize(() => {
     const stmt = db.prepare('UPDATE shopping_items SET position = ? WHERE id = ?');
