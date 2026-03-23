@@ -76,6 +76,18 @@ app.put('/api/items', (req, res) => {
   });
 });
 
+app.put('/api/items/position', (req, res) => {
+  const positions = req.body.positions || [];
+  db.bulkUpdatePositions(positions, (err) => {
+    if (err) {
+      console.error('Error updating positions:', err);
+      res.status(500).json({ error: 'Failed to update positions' });
+    } else {
+      res.json({ success: true });
+    }
+  });
+});
+
 app.put('/api/items/:id', (req, res) => {
   const id = req.params.id;
   const item = { 
@@ -100,18 +112,6 @@ app.delete('/api/items/:id', (req, res) => {
     if (err) {
       console.error('Error deleting item:', err);
       res.status(500).json({ error: 'Failed to delete item' });
-    } else {
-      res.json({ success: true });
-    }
-  });
-});
-
-app.put('/api/items/position', (req, res) => {
-  const positions = req.body.positions || [];
-  db.bulkUpdatePositions(positions, (err) => {
-    if (err) {
-      console.error('Error updating positions:', err);
-      res.status(500).json({ error: 'Failed to update positions' });
     } else {
       res.json({ success: true });
     }

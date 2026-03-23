@@ -29,21 +29,74 @@ function initDatabase() {
         `);
 
        db.run(`
-          CREATE TABLE IF NOT EXISTS shopping_items (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            quantity TEXT NOT NULL DEFAULT '1',
-            price TEXT DEFAULT '',
-            name TEXT DEFAULT '',
-            position INTEGER NOT NULL,
-            completed INTEGER DEFAULT 0,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-          )
+           CREATE TABLE IF NOT EXISTS shopping_items (
+             id INTEGER PRIMARY KEY AUTOINCREMENT,
+             quantity TEXT NOT NULL DEFAULT '1',
+             price TEXT DEFAULT '',
+             name TEXT DEFAULT '',
+             position INTEGER NOT NULL,
+             completed INTEGER DEFAULT 0,
+             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+           )
 `, (err) => {
-          if (err) {
-            reject(err);
-          } else {
-            ensureInitialData().then(resolve).catch(reject);
-          }
+           if (err) {
+             reject(err);
+           } else {
+             migrateAddMissingColumns().then(() => {
+               ensureInitialData().then(resolve).catch(reject);
+             }).catch(reject);
+           }
+         });
+      });
+    });
+  });
+}
+
+/**
+ * Migrate shopping_items table to add missing columns (name, completed)
+ * @returns {Promise<void>} Promise that resolves when migration is complete
+ */
+function migrateAddMissingColumns() {
+  return new Promise((resolve, reject) => {
+    db.serialize(() => {
+      db.get('PRAGMA table_info(shopping_items)', (err, info) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        
+        const columns = info.map(row => row.name);
+        let migrationsNeeded = [];
+        
+        if (!columns.includes('name')) {
+          migrationsNeeded.push('ALTER TABLE shopping_items ADD COLUMN name TEXT DEFAULT \'\'');
+        }
+        if (!columns.includes('completed')) {
+          migrationsNeeded.push('ALTER TABLE shopping_items ADD COLUMN completed INTEGER DEFAULT 0');
+        }
+        
+        if (migrationsNeeded.length === 0) {
+          resolve();
+          return;
+        }
+        
+        let pending = migrationsNeeded.length;
+        let migrationError = null;
+        
+        migrationsNeeded.forEach(migration => {
+          db.run(migration, (err) => {
+            if (err) {
+              migrationError = err;
+            }
+            pending--;
+            if (pending === 0) {
+              if (migrationError) {
+                reject(migrationError);
+              } else {
+                resolve();
+              }
+            }
+          });
         });
       });
     });
@@ -180,7 +233,7 @@ function deleteItem(id, callback) {
 
 /**
  * Bulk update all shopping items by replacing existing items with new ones
- * @param {Array} items - Array of item objects with quantity, price, and position properties
+ * @param {Array} items - Array of item objects with quantity, price, name, position, completed properties
  * @param {Function} callback - Callback function with error parameter
  * @returns {void}
  */
@@ -197,9 +250,9 @@ function bulkUpdateItems(items, callback) {
         return;
       }
 
-      const stmt = db.prepare('INSERT INTO shopping_items (quantity, price, position) VALUES (?, ?, ?)');
+      const stmt = db.prepare('INSERT INTO shopping_items (quantity, price, position, name, completed) VALUES (?, ?, ?, ?, ?)');
       items.forEach((item, index) => {
-        stmt.run([item.quantity, item.price, index], (err) => {
+        stmt.run([item.quantity, item.price, index, item.name || '', item.completed ? 1 : 0], (err) => {
           if (err && !stmt.err) {
             stmt.err = err;
           }
@@ -223,18 +276,69 @@ function bulkUpdateItems(items, callback) {
  * @returns {void}
  */
 function bulkUpdatePositions(positions, callback) {
-  db.serialize(() => {
-    const stmt = db.prepare('UPDATE shopping_items SET position = ? WHERE id = ?');
-    positions.forEach(({id, position}) => {
-      stmt.run([position, id]);
+  db.run('BEGIN', (err) => {
+    if (err) {
+      callback(err);
+      return;
+    }
+    
+    db.serialize(() => {
+      const stmt = db.prepare('UPDATE shopping_items SET position = ? WHERE id = ?');
+      let error = null;
+      let remaining = positions.length;
+      
+      if (remaining === 0) {
+        stmt.finalize((finalizeErr) => {
+          db.run('COMMIT', (commitErr) => {
+            callback(error || finalizeErr || commitErr || null);
+          });
+        });
+        return;
+      }
+      
+      positions.forEach(({id, position}) => {
+        stmt.run([position, id], (runErr) => {
+          if (runErr && !error) {
+            error = runErr;
+          }
+          remaining--;
+          if (remaining === 0) {
+            stmt.finalize((finalizeErr) => {
+              const finalizeError = finalizeErr || error;
+              db.run('COMMIT', (commitErr) => {
+                if (finalizeError || commitErr) {
+                  callback(finalizeError || commitErr);
+                } else {
+                  callback(null);
+                }
+              });
+            });
+          }
+        });
+      });
     });
-    stmt.finalize();
-    callback(null);
+  });
+}
+    
+    positions.forEach(({id, position}) => {
+      stmt.run([position, id], (err) => {
+        if (err && !error) {
+          error = err;
+        }
+        remaining--;
+        if (remaining === 0) {
+          stmt.finalize((finalizeErr) => {
+            callback(error || finalizeErr || null);
+          });
+        }
+      });
+    });
   });
 }
 
 module.exports = {
   initDatabase,
+  migrateAddMissingColumns,
   getBudget,
   updateBudget,
   getItems,

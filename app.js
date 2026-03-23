@@ -247,6 +247,7 @@ function createListItemElement(item, index) {
   div.className = `list-item ${item.completed ? 'completed' : ''}`;
   div.dataset.index = index;
   div.dataset.id = item.id;
+  div.draggable = true;
   
   div.innerHTML = `
     <div class="col-check">
@@ -478,7 +479,7 @@ function handleDragEnd(e) {
   const currentItems = Array.from(container.querySelectorAll('.list-item:not(.completed)'));
   
   positionsToUpdate = currentItems.map((item, index) => ({
-    id: appData.items[index]?.id || item.dataset.id,
+    id: item.dataset.id,
     position: index
   }));
   
@@ -505,7 +506,8 @@ function renderActiveItems() {
   
   container.innerHTML = '';
   active.forEach((item, index) => {
-    const el = createListItemElement(item, index);
+    const originalIndex = appData.items.findIndex(it => it.id === item.id);
+    const el = createListItemElement(item, originalIndex);
     container.appendChild(el);
   });
 }
@@ -524,7 +526,8 @@ function renderCompletedItems() {
   section.classList.remove('hidden');
   container.innerHTML = '';
   completed.forEach((item, index) => {
-    const el = createListItemElement(item, index);
+    const originalIndex = appData.items.findIndex(it => it.id === item.id);
+    const el = createListItemElement(item, originalIndex);
     el.classList.add('completed');
     container.appendChild(el);
   });
