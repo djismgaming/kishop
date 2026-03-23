@@ -24,6 +24,8 @@ COPY manifest.json /usr/share/nginx/html/
 COPY icon.svg /usr/share/nginx/html/
 COPY *.png /usr/share/nginx/html/
 
+RUN touch /usr/share/nginx/html/.gitkeep
+
 RUN apk add --no-cache su-exec
 
 RUN mkdir -p /etc/nginx/http.d
