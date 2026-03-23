@@ -6,10 +6,9 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  font-size: 16px;
+  font-size: 14px;
   background-color: #111827;
   color: #f9fafb;
-  padding-bottom: 180px;
 }
 
 .app-container {
@@ -20,9 +19,9 @@ body {
 }
 
 header.budget-section {
-  padding: 16px;
+  padding: 12px 16px;
   background: #1f2937;
-  border-bottom: 2px solid #374151;
+  border-bottom: 1px solid #374151;
   position: sticky;
   top: 0;
   z-index: 10;
@@ -31,8 +30,9 @@ header.budget-section {
 .budget-section label {
   display: block;
   font-weight: 600;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   color: #9ca3af;
+  font-size: 13px;
 }
 
 .budget-input-wrapper {
@@ -42,18 +42,18 @@ header.budget-section {
 }
 
 .currency-symbol {
-  font-size: 24px;
+  font-size: 18px;
   font-weight: 600;
   color: #9ca3af;
 }
 
 #max-budget {
   flex: 1;
-  font-size: 24px;
+  font-size: 18px;
   font-weight: 600;
-  padding: 8px 4px;
-  border: 2px solid #374151;
-  border-radius: 8px;
+  padding: 6px 4px;
+  border: 1px solid #374151;
+  border-radius: 6px;
   width: 100%;
   background: #1f2937;
   color: #f9fafb;
@@ -66,21 +66,21 @@ header.budget-section {
 }
 
 main.shopping-list-container {
-  padding: 16px;
+  padding: 12px;
   position: relative;
 }
 
 .list-header {
   display: grid;
-  grid-template-columns: 60px 1fr 50px;
+  grid-template-columns: 50px 1fr 40px;
   gap: 8px;
-  padding: 8px;
+  padding: 6px 8px;
   background: #1f2937;
-  border-radius: 8px;
+  border-radius: 6px;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px;
   color: #9ca3af;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .shopping-list {
@@ -91,12 +91,12 @@ main.shopping-list-container {
 
 .list-item {
   display: grid;
-  grid-template-columns: 60px 1fr 50px;
+  grid-template-columns: 50px 1fr 40px;
   gap: 8px;
   align-items: center;
-  padding: 12px;
+  padding: 10px;
   background: #374151;
-  border-radius: 12px;
+  border-radius: 8px;
   transition: background 0.2s;
 }
 
@@ -107,8 +107,8 @@ main.shopping-list-container {
 .col-qty input,
 .col-price input {
   width: 100%;
-  font-size: 16px;
-  padding: 10px 8px;
+  font-size: 15px;
+  padding: 8px 6px;
   border: 1px solid #374151;
   border-radius: 6px;
   background: #374151;
@@ -138,16 +138,16 @@ main.shopping-list-container {
 }
 
 .delete-btn {
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
-  min-height: 40px;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
   border: none;
   background: #dc2626;
   color: white;
   border-radius: 8px;
   cursor: pointer;
-  font-size: 20px;
+  font-size: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -163,13 +163,13 @@ main.shopping-list-container {
 }
 
 footer.totals-panel {
-  position: fixed;
+  position: relative;
   bottom: 0;
   left: 0;
   right: 0;
   background: #059669;
-  border-top: 3px solid #047857;
-  padding: 16px;
+  border-top: 2px solid #047857;
+  padding: 12px 16px;
   z-index: 100;
 }
 
@@ -186,8 +186,8 @@ footer.totals-panel.danger {
 .totals-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 8px;
+  margin-bottom: 10px;
 }
 
 .total-item {
@@ -195,27 +195,27 @@ footer.totals-panel.danger {
 }
 
 .total-label {
-  font-size: 12px;
+  font-size: 10px;
   color: rgba(255, 255, 255, 0.8);
-  margin-bottom: 4px;
+  margin-bottom: 3px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .total-value {
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 700;
   color: white;
 }
 
 .clear-btn {
-  width: 100%;
-  padding: 12px;
+  width: 50%;
+  padding: 10px;
   background: #374151;
   color: white;
   border: none;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   text-transform: uppercase;
@@ -229,7 +229,7 @@ footer.totals-panel.danger {
 
 .buttons-row {
   display: flex;
-  gap: 12px;
+  gap: 8px;
 }
 
 .buttons-row button {
@@ -242,65 +242,115 @@ footer.totals-panel.danger {
 
 .empty-state {
   text-align: center;
-  padding: 40px 20px;
+  padding: 30px 20px;
   color: #6b7280;
 }
 
 .empty-state p {
-  font-size: 14px;
+  font-size: 13px;
   margin-top: 8px;
 }
 
 @media (max-width: 480px) {
-  body {
-    padding-bottom: 200px;
-  }
-
   .list-header {
-    grid-template-columns: 50px 1fr 44px;
-    font-size: 13px;
+    grid-template-columns: 45px 1fr 36px;
+    font-size: 12px;
+    padding: 5px 8px;
   }
 
   .list-item {
-    grid-template-columns: 50px 1fr 44px;
-    padding: 10px;
+    grid-template-columns: 45px 1fr 36px;
+    padding: 8px;
   }
 
   .col-qty input,
   .col-price input {
-    font-size: 15px;
-    padding: 8px 6px;
+    font-size: 14px;
+    padding: 7px 5px;
   }
 
   .delete-btn {
-    width: 36px;
-    height: 36px;
-    min-width: 36px;
-    min-height: 36px;
-    font-size: 18px;
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    font-size: 16px;
   }
 
-  .totals-grid {
-    gap: 8px;
+  .budget-section {
+    padding: 10px 12px;
   }
 
-  .total-value {
-    font-size: 18px;
+  #max-budget {
+    font-size: 16px;
+    padding: 5px 4px;
   }
 
-  .total-label {
+  .currency-symbol {
+    font-size: 16px;
+  }
+
+  .buttons-row {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .clear-btn,
+  .refresh-btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 350px) {
+  .list-header {
+    grid-template-columns: 40px 1fr 32px;
     font-size: 11px;
   }
 
+  .list-item {
+    grid-template-columns: 40px 1fr 32px;
+    padding: 6px;
+  }
+
+  .col-qty input,
+  .col-price input {
+    font-size: 13px;
+    padding: 6px 4px;
+  }
+
+  .delete-btn {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    min-height: 28px;
+    font-size: 14px;
+  }
+
+  .budget-section {
+    padding: 8px 10px;
+  }
+
+  #max-budget {
+    font-size: 15px;
+    padding: 4px 3px;
+  }
+
+  .currency-symbol {
+    font-size: 15px;
+  }
+
+  .empty-state p {
+    font-size: 12px;
+  }
 }
 
 .refresh-btn {
-  padding: 12px;
+  padding: 10px;
   background: linear-gradient(to right, #6366f1, #a855f7);
   color: white;
   border: none;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   text-transform: uppercase;
@@ -317,8 +367,8 @@ footer.totals-panel.danger {
 }
 
 .refresh-btn svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 
 @keyframes pulse {
