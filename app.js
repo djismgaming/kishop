@@ -447,7 +447,13 @@ async function init() {
   
   document.getElementById('toggle-shopping').addEventListener('click', () => toggleView('shopping'));
   document.getElementById('toggle-list').addEventListener('click', () => toggleView('list'));
-  document.getElementById('add-item-btn').addEventListener('click', addItemToList);
+  document.getElementById('add-item-btn').addEventListener('click', () => {
+    if (appData.currentView === 'list') {
+      addItemToList();
+    } else {
+      addEmptyRow();
+    }
+  });
 }
 
 let dragItem = null;

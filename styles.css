@@ -252,11 +252,128 @@ footer.totals-panel.danger {
 }
 
 @media (max-width: 480px) {
+  body {
+    padding-bottom: 200px;
+  }
+
   .list-header {
-    grid-template-columns: 45px 1fr 36px;
-    font-size: 12px;
+    grid-template-columns: 50px 1fr 44px;
+    font-size: 13px;
     padding: 5px 8px;
   }
+
+  .list-item {
+    grid-template-columns: 50px 1fr 44px;
+    padding: 8px;
+  }
+
+  .col-qty input,
+  .col-price input {
+    font-size: 14px;
+    padding: 7px 5px;
+  }
+
+  .delete-btn {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    font-size: 16px;
+  }
+
+  .budget-section {
+    padding: 10px 12px;
+  }
+
+  #max-budget {
+    font-size: 16px;
+    padding: 5px 4px;
+  }
+
+  .currency-symbol {
+    font-size: 16px;
+  }
+
+  .buttons-row {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .clear-btn,
+  .refresh-btn {
+    width: 100%;
+  }
+
+  #list-view .list-header {
+    grid-template-columns: 45px 60px 1fr 45px;
+  }
+
+  #list-view .list-item {
+    grid-template-columns: 45px 60px 1fr 45px;
+    padding: 10px;
+  }
+
+  .check-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+  }
+
+  .totals-grid {
+    gap: 8px;
+  }
+
+  .total-value {
+    font-size: 18px;
+  }
+
+  .total-label {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 350px) {
+  .list-header {
+    grid-template-columns: 40px 1fr 32px;
+    font-size: 11px;
+  }
+
+  .list-item {
+    grid-template-columns: 40px 1fr 32px;
+    padding: 6px;
+  }
+
+  .col-qty input,
+  .col-price input {
+    font-size: 13px;
+    padding: 6px 4px;
+  }
+
+  .delete-btn {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    min-height: 28px;
+    font-size: 14px;
+  }
+
+  .budget-section {
+    padding: 8px 10px;
+  }
+
+  #max-budget {
+    font-size: 15px;
+    padding: 4px 3px;
+  }
+
+  .currency-symbol {
+    font-size: 15px;
+  }
+
+  .empty-state p {
+    font-size: 12px;
+  }
+}
 
   .list-item {
     grid-template-columns: 45px 1fr 36px;
