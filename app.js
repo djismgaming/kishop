@@ -152,7 +152,14 @@ function createItemElement(item, index) {
       >
     </div>
     <div class="col-action">
-      <button class="delete-btn" aria-label="Delete item">&times;</button>
+      <button class="delete-btn" aria-label="Delete item">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          <line x1="10" y1="1" x2="10" y2="2"></line>
+          <line x1="14" y1="1" x2="14" y2="2"></line>
+        </svg>
+      </button>
     </div>
   `;
 
@@ -206,6 +213,7 @@ function renderList() {
       <div class="empty-state">
         <div style="font-size: 32px;">🛒</div>
         <p>Start adding items to your shopping list</p>
+        <button id="add-item-btn" style="margin-top: 16px; padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 14px; cursor: pointer;">Add Item</button>
       </div>
     `;
     return;
@@ -341,6 +349,9 @@ async function init() {
 
   document.getElementById('clear-all').addEventListener('click', clearAll);
   document.getElementById('refresh-btn').addEventListener('click', refreshData);
+  document.getElementById('add-item-btn').addEventListener('click', () => {
+    addEmptyRow();
+  });
 
   renderList();
   updateTotalsDisplay();
