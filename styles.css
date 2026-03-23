@@ -406,49 +406,6 @@ footer.totals-panel.success {
   }
 }
 
-  .list-item {
-    grid-template-columns: 45px 1fr 36px;
-    padding: 8px;
-  }
-
-  .col-qty input,
-  .col-price input {
-    font-size: 14px;
-    padding: 7px 5px;
-  }
-
-  .delete-btn {
-    width: 32px;
-    height: 32px;
-    min-width: 32px;
-    min-height: 32px;
-    font-size: 16px;
-  }
-
-  .budget-section {
-    padding: 10px 12px;
-  }
-
-  #max-budget {
-    font-size: 16px;
-    padding: 5px 4px;
-  }
-
-  .currency-symbol {
-    font-size: 16px;
-  }
-
-  .buttons-row {
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .clear-btn,
-  .refresh-btn {
-    width: 100%;
-  }
-}
-
 @media (max-width: 350px) {
   .list-header {
     grid-template-columns: 40px 1fr 32px;
@@ -661,7 +618,7 @@ footer.totals-panel.success {
   color: var(--text-muted);
 }
 
-.completed .list-item {
+.list-item.completed {
   opacity: 0.6;
   background: var(--bg-secondary);
 }
@@ -678,10 +635,6 @@ footer.totals-panel.success {
   border-color: var(--accent-blue);
 }
 
-.completed .col-qty input {
-  text-decoration: line-through;
-}
-
 .completed-list {
   margin-top: 24px;
   padding-top: 16px;
@@ -693,13 +646,6 @@ footer.totals-panel.success {
   font-weight: 600;
   color: var(--text-secondary);
   margin-bottom: 12px;
-}
-
-.list-item.dragging {
-  opacity: 0.5;
-  background: var(--bg-hover);
-  cursor: grabbing;
-  border-color: var(--accent-blue);
 }
 
 .completed.hidden {

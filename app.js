@@ -120,6 +120,8 @@ function updateTotalsDisplay() {
       footer.classList.add('danger');
     } else if (percentage >= 75) {
       footer.classList.add('warning');
+    } else {
+      footer.classList.add('success');
     }
   }
 }
