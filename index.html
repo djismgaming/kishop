@@ -37,15 +37,35 @@
           min="0"
         >
       </div>
+      <div class="toggle-nav">
+        <button id="toggle-shopping" class="nav-btn active">Shopping</button>
+        <button id="toggle-list" class="nav-btn">Shopping List</button>
+      </div>
     </header>
 
     <main class="shopping-list-container">
-      <div class="list-header">
-        <div class="col-qty">Qty</div>
-        <div class="col-price">Price</div>
-        <div class="col-action"></div>
-      </div>
-      <div id="shopping-list" class="shopping-list"></div>
+      <!-- Shopping View (existing) -->
+      <section id="shopping-view">
+        <div class="list-header">
+          <div class="col-qty">Qty</div>
+          <div class="col-price">Price</div>
+          <div class="col-action"></div>
+        </div>
+        <div id="shopping-list" class="shopping-list"></div>
+      </section>
+
+      <!-- Shopping List View (new) -->
+      <section id="list-view" class="hidden">
+        <div id="active-items-container">
+          <div id="active-items" class="shopping-list"></div>
+          <button id="add-item-btn" class="add-item-btn">+ Add Item</button>
+        </div>
+        
+        <div id="completed-section" class="hidden">
+          <h3 class="completed-header">Complete</h3>
+          <div id="completed-items" class="shopping-list completed-list"></div>
+        </div>
+      </section>
     </main>
 
     <footer class="totals-panel">

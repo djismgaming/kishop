@@ -3,7 +3,8 @@ const API_BASE = '/api';
 
 let appData = {
   maxBudget: 0,
-  items: []
+  items: [],
+  currentView: 'shopping'
 };
 
 async function loadBudget() {
@@ -217,6 +218,86 @@ function renderList() {
   });
 }
 
+function toggleView(view) {
+  appData.currentView = view;
+  
+  const shoppingView = document.getElementById('shopping-view');
+  const listView = document.getElementById('list-view');
+  const toggleShopping = document.getElementById('toggle-shopping');
+  const toggleList = document.getElementById('toggle-list');
+  
+  if (view === 'shopping') {
+    shoppingView.classList.remove('hidden');
+    listView.classList.add('hidden');
+    toggleShopping.classList.add('active');
+    toggleList.classList.remove('active');
+  } else {
+    shoppingView.classList.add('hidden');
+    listView.classList.remove('hidden');
+    toggleShopping.classList.remove('active');
+    toggleList.classList.add('active');
+    
+    renderActiveItems();
+    renderCompletedItems();
+  }
+}
+
+function createListItemElement(item, index) {
+  const div = document.createElement('div');
+  div.className = `list-item ${item.completed ? 'completed' : ''}`;
+  div.dataset.index = index;
+  div.dataset.id = item.id;
+  
+  div.innerHTML = `
+    <div class="col-check">
+      <button class="check-btn" aria-label="Toggle complete">✓</button>
+    </div>
+    <div class="col-qty">
+      <input type="number" value="${item.quantity || ''}" placeholder="0" min="0" step="1">
+    </div>
+    <div class="col-name">
+      <input type="text" value="${item.name || ''}" placeholder="Item name">
+    </div>
+    <div class="col-action">
+      <button class="delete-btn" aria-label="Delete item">&times;</button>
+    </div>
+  `;
+  
+  const checkBtn = div.querySelector('.check-btn');
+  const qtyInput = div.querySelector('.col-qty input');
+  const nameInput = div.querySelector('.col-name input');
+  const deleteBtn = div.querySelector('.delete-btn');
+  
+  checkBtn.addEventListener('click', () => {
+    toggleItemComplete(item.id);
+  });
+  
+  qtyInput.addEventListener('input', () => {
+    saveItem(index, 'quantity', qtyInput.value);
+  });
+  
+  nameInput.addEventListener('input', () => {
+    saveItem(index, 'name', nameInput.value);
+  });
+  
+  deleteBtn.addEventListener('click', () => {
+    const itemId = item.id;
+    appData.items.splice(index, 1);
+    if (itemId) {
+      fetch(`${API_BASE}/items/${itemId}`, {
+        method: 'DELETE'
+      }).catch(e => console.error('Error deleting item:', e));
+    }
+    renderActiveItems();
+    renderCompletedItems();
+  });
+  
+  div.addEventListener('dragstart', handleDragStart);
+  div.addEventListener('dragend', handleDragEnd);
+  
+  return div;
+}
+
 function addEmptyRow() {
   const item = { quantity: '1', price: '' };
   appData.items.push(item);
@@ -345,6 +426,141 @@ async function init() {
   renderList();
   updateTotalsDisplay();
   ensureEmptyRow();
+  
+  const activeContainer = document.getElementById('active-items');
+  if (activeContainer) {
+    activeContainer.addEventListener('dragover', handleDragOver);
+    activeContainer.addEventListener('dragenter', (e) => e.preventDefault());
+  }
+  
+  document.getElementById('toggle-shopping').addEventListener('click', () => toggleView('shopping'));
+  document.getElementById('toggle-list').addEventListener('click', () => toggleView('list'));
+  document.getElementById('add-item-btn').addEventListener('click', addItemToList);
+}
+
+let dragItem = null;
+let dragIndex = null;
+let positionsToUpdate = [];
+
+function handleDragStart(e) {
+  const item = e.target.closest('.list-item');
+  if (!item || item.classList.contains('completed') || item.classList.contains('dragging')) return;
+  
+  dragItem = item;
+  dragIndex = parseInt(item.dataset.index);
+  item.classList.add('dragging');
+  e.dataTransfer.effect = 'move';
+  e.dataTransfer.setData('text/plain', dragIndex);
+}
+
+function handleDragOver(e) {
+  e.preventDefault();
+  const item = e.target.closest('.list-item');
+  if (!item || item.classList.contains('completed') || item === dragItem) return;
+  
+  const targetIndex = parseInt(item.dataset.index);
+  const container = document.getElementById('active-items');
+  
+  if (targetIndex < dragIndex) {
+    container.insertBefore(dragItem, item);
+  } else {
+    const nextItem = item.nextElementSibling;
+    if (nextItem && nextItem.classList.contains('list-item')) {
+      container.insertBefore(dragItem, nextItem);
+    } else {
+      container.appendChild(dragItem);
+    }
+  }
+}
+
+function handleDragEnd(e) {
+  const container = document.getElementById('active-items');
+  const currentItems = Array.from(container.querySelectorAll('.list-item:not(.completed)'));
+  
+  positionsToUpdate = currentItems.map((item, index) => ({
+    id: appData.items[index]?.id || item.dataset.id,
+    position: index
+  }));
+  
+  if (positionsToUpdate.length > 0) {
+    fetch(`${API_BASE}/items/position`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ positions: positionsToUpdate })
+    }).catch(e => console.error('Error updating positions:', e));
+  }
+  
+  dragItem.classList.remove('dragging');
+  dragItem = null;
+}
+
+function renderActiveItems() {
+  const container = document.getElementById('active-items');
+  const active = appData.items.filter(item => !item.completed);
+  
+  if (active.length === 0) {
+    container.innerHTML = '<div class="empty-state">No active items</div>';
+    return;
+  }
+  
+  container.innerHTML = '';
+  active.forEach((item, index) => {
+    const el = createListItemElement(item, index);
+    container.appendChild(el);
+  });
+}
+
+function renderCompletedItems() {
+  const container = document.getElementById('completed-items');
+  const completed = appData.items.filter(item => item.completed);
+  
+  const section = document.getElementById('completed-section');
+  
+  if (completed.length === 0) {
+    section.classList.add('hidden');
+    return;
+  }
+  
+  section.classList.remove('hidden');
+  container.innerHTML = '';
+  completed.forEach((item, index) => {
+    const el = createListItemElement(item, index);
+    el.classList.add('completed');
+    container.appendChild(el);
+  });
+}
+
+function toggleItemComplete(id) {
+  const item = appData.items.find(i => i.id == id);
+  if (!item) return;
+  
+  item.completed = !item.completed;
+  
+  renderActiveItems();
+  renderCompletedItems();
+  
+  fetch(`${API_BASE}/items/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ completed: item.completed })
+  }).catch(e => console.error('Error updating complete:', e));
+}
+
+function addItemToList() {
+  const item = { quantity: '1', price: '', completed: false };
+  appData.items.push(item);
+  renderActiveItems();
+  renderCompletedItems();
+  saveNewItem(item);
+  
+  const container = document.getElementById('active-items');
+  const lastItem = container.lastElementChild;
+  if (lastItem) {
+    const qtyInput = lastItem.querySelector('.col-qty input');
+    if (qtyInput) {
+      qtyInput.focus();
+    }
+  }
 }
 
 document.addEventListener('DOMContentLoaded', init);

@@ -335,3 +335,233 @@ footer.totals-panel.danger {
 .pulsing {
   animation: pulse 1s ease-in-out;
 }
+
+.toggle-nav {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.nav-btn {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  background: #374151;
+  color: #9ca3af;
+  transition: all 0.2s;
+}
+
+.nav-btn.active {
+  background: #3b82f6;
+  color: white;
+}
+
+.nav-btn:hover:not(.active) {
+  background: #4b5563;
+}
+
+.hidden {
+  display: none !important;
+}
+
+#list-view .list-header {
+  display: grid;
+  grid-template-columns: 50px 60px 1fr 50px;
+  gap: 8px;
+  padding: 8px;
+  background: #1f2937;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #9ca3af;
+  margin-bottom: 12px;
+}
+
+#list-view .shopping-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#list-view .list-item {
+  display: grid;
+  grid-template-columns: 50px 60px 1fr 50px;
+  gap: 8px;
+  align-items: center;
+  padding: 12px;
+  background: #374151;
+  border-radius: 12px;
+  transition: background 0.2s;
+}
+
+#list-view .list-item:focus-within {
+  background: #252f3e;
+}
+
+#list-view .col-check {
+  display: flex;
+  justify-content: center;
+}
+
+.check-btn {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: #374151;
+  color: #9ca3af;
+  border-radius: 8px;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.check-btn:hover {
+  background: #4b5563;
+}
+
+.completed .check-btn {
+  background: #10b981;
+  color: white;
+}
+
+.col-name input {
+  width: 100%;
+  font-size: 16px;
+  padding: 10px 8px;
+  border: 1px solid #374151;
+  border-radius: 6px;
+  background: #374151;
+  color: #f9fafb;
+}
+
+.col-name input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+}
+
+.col-name .item-placeholder {
+  color: #6b7280;
+  font-style: italic;
+}
+
+.completed .col-name input {
+  text-decoration: line-through;
+}
+
+.completed .col-name .item-placeholder {
+  text-decoration: line-through;
+  color: #4b5563;
+}
+
+.completed .list-item {
+  opacity: 0.7;
+}
+
+.completed .col-qty input {
+  text-decoration: line-through;
+}
+
+.completed-list {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 2px solid #374151;
+}
+
+.completed-header {
+  font-size: 16px;
+  font-weight: 600;
+  color: #9ca3af;
+  margin-bottom: 12px;
+}
+
+.list-item.dragging {
+  opacity: 0.5;
+  background: #252f3e;
+  cursor: grabbing;
+}
+
+.completed.hidden {
+  display: none;
+}
+
+.add-item-btn {
+  margin-top: 16px;
+  padding: 12px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.add-item-btn:hover {
+  background: #2563eb;
+}
+
+@media (max-width: 480px) {
+  body {
+    padding-bottom: 200px;
+  }
+
+  .list-header {
+    grid-template-columns: 50px 1fr 44px;
+    font-size: 13px;
+  }
+
+  .list-item {
+    grid-template-columns: 50px 1fr 44px;
+    padding: 10px;
+  }
+
+  .col-qty input,
+  .col-price input {
+    font-size: 15px;
+    padding: 8px 6px;
+  }
+
+  .delete-btn {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    font-size: 18px;
+  }
+
+  .totals-grid {
+    gap: 8px;
+  }
+
+  .total-value {
+    font-size: 18px;
+  }
+
+  .total-label {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  #list-view .list-header {
+    grid-template-columns: 45px 60px 1fr 45px;
+  }
+
+  #list-view .list-item {
+    grid-template-columns: 45px 60px 1fr 45px;
+    padding: 10px;
+  }
+
+  .check-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+  }
+}

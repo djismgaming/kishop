@@ -24,15 +24,17 @@ function initDatabase() {
           )
         `);
 
-        db.run(`
+       db.run(`
           CREATE TABLE IF NOT EXISTS shopping_items (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             quantity TEXT NOT NULL DEFAULT '1',
             price TEXT DEFAULT '',
+            name TEXT DEFAULT '',
             position INTEGER NOT NULL,
+            completed INTEGER DEFAULT 0,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
           )
-        `, (err) => {
+`, (err) => {
           if (err) {
             reject(err);
           } else {
@@ -78,7 +80,7 @@ function updateBudget(maxBudget, callback) {
 }
 
 function getItems(callback) {
-  db.all('SELECT id, quantity, price, position FROM shopping_items ORDER BY position ASC', (err, rows) => {
+  db.all('SELECT id, quantity, price, name, position, completed FROM shopping_items ORDER BY position ASC', (err, rows) => {
     if (err) callback(err);
     else callback(null, rows || []);
   });
@@ -94,7 +96,33 @@ function addItem(item, callback) {
 }
 
 function updateItem(id, item, callback) {
-  db.run('UPDATE shopping_items SET quantity = ?, price = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [item.quantity, item.price, id], function(err) {
+  const updates = [];
+  const values = [];
+  
+  if (item.quantity !== undefined) {
+    updates.push('quantity = ?');
+    values.push(item.quantity);
+  }
+  if (item.price !== undefined) {
+    updates.push('price = ?');
+    values.push(item.price);
+  }
+  if (item.name !== undefined) {
+    updates.push('name = ?');
+    values.push(item.name);
+  }
+  if (item.completed !== undefined) {
+    updates.push('completed = ?');
+    values.push(item.completed ? 1 : 0);
+  }
+  
+  if (updates.length === 0) {
+    callback(null, 0);
+    return;
+  }
+  
+  values.push(id);
+  db.run(`UPDATE shopping_items SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, values, function(err) {
     if (err) callback(err);
     else callback(null, this.changes);
   });
@@ -139,6 +167,17 @@ function bulkUpdateItems(items, callback) {
   });
 }
 
+function bulkUpdatePositions(positions, callback) {
+  db.serialize(() => {
+    const stmt = db.prepare('UPDATE shopping_items SET position = ? WHERE id = ?');
+    positions.forEach(({id, position}) => {
+      stmt.run([position, id]);
+    });
+    stmt.finalize();
+    callback(null);
+  });
+}
+
 module.exports = {
   initDatabase,
   getBudget,
@@ -147,5 +186,6 @@ module.exports = {
   addItem,
   updateItem,
   deleteItem,
-  bulkUpdateItems
+  bulkUpdateItems,
+  bulkUpdatePositions
 };
