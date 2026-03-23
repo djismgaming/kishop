@@ -6,13 +6,14 @@ services:
     ports:
       - "3000:80"
     volumes:
-      - ./data:/data
+      - kishop:/data
     environment:
       - DB_PATH=/data/shopping.db
       - PORT=3001
     networks:
       - linuxserver
-
+volumes:
+  kishop:
 networks:
   linuxserver:
     external: true
