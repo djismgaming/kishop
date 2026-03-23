@@ -488,6 +488,17 @@ function handleDragEnd(e) {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ positions: positionsToUpdate })
+    }).then(async response => {
+      if (response.ok) {
+        const data = await response.json();
+        appData.items.forEach(item => {
+          const pos = positionsToUpdate.find(p => p.id === item.id);
+          if (pos) {
+            item.position = pos.position;
+          }
+        });
+        appData.items.sort((a, b) => a.position - b.position);
+      }
     }).catch(e => console.error('Error updating positions:', e));
   }
   

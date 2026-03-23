@@ -59,13 +59,13 @@ function initDatabase() {
 function migrateAddMissingColumns() {
   return new Promise((resolve, reject) => {
     db.serialize(() => {
-      db.get('PRAGMA table_info(shopping_items)', (err, info) => {
+      db.all('PRAGMA table_info(shopping_items)', (err, rows) => {
         if (err) {
           reject(err);
           return;
         }
         
-        const columns = info.map(row => row.name);
+        const columns = rows.map(row => row.name);
         let migrationsNeeded = [];
         
         if (!columns.includes('name')) {
@@ -165,13 +165,13 @@ function getItems(callback) {
 
 /**
  * Add a new shopping item to the database
- * @param {Object} item - Item object with quantity and price properties
+ * @param {Object} item - Item object with quantity, price and name properties
  * @param {Function} callback - Callback function with error and lastID parameters
  * @returns {void}
  */
 function addItem(item, callback) {
-  const stmt = db.prepare('INSERT INTO shopping_items (quantity, price, position) SELECT ?, ?, COALESCE(MAX(position), -1) + 1 FROM shopping_items');
-  stmt.run([item.quantity, item.price], function(err) {
+  const stmt = db.prepare('INSERT INTO shopping_items (quantity, price, position, name) SELECT ?, ?, COALESCE(MAX(position), -1) + 1, ? FROM shopping_items');
+  stmt.run([item.quantity, item.price, item.name || ''], function(err) {
     if (err) callback(err);
     else callback(null, this.lastID);
   });
@@ -315,22 +315,6 @@ function bulkUpdatePositions(positions, callback) {
             });
           }
         });
-      });
-    });
-  });
-}
-    
-    positions.forEach(({id, position}) => {
-      stmt.run([position, id], (err) => {
-        if (err && !error) {
-          error = err;
-        }
-        remaining--;
-        if (remaining === 0) {
-          stmt.finalize((finalizeErr) => {
-            callback(error || finalizeErr || null);
-          });
-        }
       });
     });
   });
