@@ -158,6 +158,53 @@ main.shopping-list-container {
   justify-content: center;
 }
 
+.col-drag {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.drag-handle {
+  font-size: 24px;
+  color: var(--text-secondary);
+  cursor: grab;
+  padding: 6px 10px;
+  touch-action: none;
+  user-select: none;
+  line-height: 1;
+  opacity: 0.6;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.drag-handle:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+  opacity: 1;
+}
+
+.dragging {
+  opacity: 0.5;
+}
+
+.list-item.saving {
+  opacity: 0.6;
+}
+
+.list-item.saving .check-btn,
+.list-item.saving .delete-btn {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.drag-handle.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .delete-btn {
   width: 36px;
   height: 36px;
@@ -406,49 +453,6 @@ footer.totals-panel.success {
   }
 }
 
-@media (max-width: 350px) {
-  .list-header {
-    grid-template-columns: 40px 1fr 32px;
-    font-size: 11px;
-  }
-
-  .list-item {
-    grid-template-columns: 40px 1fr 32px;
-    padding: 6px;
-  }
-
-  .col-qty input,
-  .col-price input {
-    font-size: 13px;
-    padding: 6px 4px;
-  }
-
-  .delete-btn {
-    width: 28px;
-    height: 28px;
-    min-width: 28px;
-    min-height: 28px;
-    font-size: 14px;
-  }
-
-  .budget-section {
-    padding: 8px 10px;
-  }
-
-  #max-budget {
-    font-size: 15px;
-    padding: 4px 3px;
-  }
-
-  .currency-symbol {
-    font-size: 15px;
-  }
-
-  .empty-state p {
-    font-size: 12px;
-  }
-}
-
 .refresh-btn {
   padding: 10px;
   background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
@@ -528,7 +532,7 @@ footer.totals-panel.success {
 
 #list-view .list-header {
   display: grid;
-  grid-template-columns: 50px 60px 1fr 50px;
+  grid-template-columns: 50px 60px 1fr 50px 50px;
   gap: 8px;
   padding: 8px;
   background: var(--bg-secondary);
@@ -541,7 +545,7 @@ footer.totals-panel.success {
 
 #list-view .list-item {
   display: grid;
-  grid-template-columns: 50px 60px 1fr 50px;
+  grid-template-columns: 50px 60px 1fr 50px 50px;
   gap: 8px;
   align-items: center;
   padding: 12px;
@@ -692,12 +696,36 @@ footer.totals-panel.success {
     padding: 8px 6px;
   }
 
+  #list-view .list-header {
+    grid-template-columns: 45px 60px 1fr 45px 50px;
+  }
+
+  #list-view .list-item {
+    grid-template-columns: 45px 60px 1fr 45px 50px;
+    padding: 10px;
+  }
+
   .delete-btn {
     width: 36px;
     height: 36px;
     min-width: 36px;
     min-height: 36px;
     font-size: 18px;
+  }
+
+  .check-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+  }
+
+  .col-drag {
+    width: 40px;
+  }
+
+  .drag-handle {
+    font-size: 22px;
+    padding: 4px 8px;
   }
 
   .totals-grid {
@@ -710,22 +738,5 @@ footer.totals-panel.success {
 
   .total-label {
     font-size: 11px;
-  }
-}
-
-@media (max-width: 480px) {
-  #list-view .list-header {
-    grid-template-columns: 45px 60px 1fr 45px;
-  }
-
-  #list-view .list-item {
-    grid-template-columns: 45px 60px 1fr 45px;
-    padding: 10px;
-  }
-
-  .check-btn {
-    width: 36px;
-    height: 36px;
-    font-size: 18px;
   }
 }
