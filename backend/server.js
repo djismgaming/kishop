@@ -185,6 +185,7 @@ app.delete('/api/list-items/:id', (req, res) => {
 db.initDatabase().then(() => {
   app.listen(PORT, () => {
     console.log(`Backend server running on port ${PORT}`);
+    console.log(`Access on http://localhost:${PORT}`);
   });
 }).catch((err) => {
   console.error('Failed to start database:', err);
