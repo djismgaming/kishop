@@ -9,7 +9,7 @@ services:
       - kishop:/data
     environment:
       - DB_PATH=/data/shopping.db
-      - PORT=3001
+      - PORT=3000
     networks:
       - linuxserver
 volumes:
