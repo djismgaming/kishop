@@ -158,6 +158,38 @@ main.shopping-list-container {
   justify-content: center;
 }
 
+.col-drag {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.drag-handle {
+  font-size: 24px;
+  color: var(--text-secondary);
+  cursor: grab;
+  padding: 6px 10px;
+  touch-action: none;
+  user-select: none;
+  line-height: 1;
+  opacity: 0.6;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.drag-handle:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+  opacity: 1;
+}
+
+.dragging {
+  opacity: 0.5;
+}
+
 .delete-btn {
   width: 36px;
   height: 36px;
@@ -528,7 +560,7 @@ footer.totals-panel.success {
 
 #list-view .list-header {
   display: grid;
-  grid-template-columns: 50px 60px 1fr 50px;
+  grid-template-columns: 50px 60px 1fr 50px 50px;
   gap: 8px;
   padding: 8px;
   background: var(--bg-secondary);
@@ -541,7 +573,7 @@ footer.totals-panel.success {
 
 #list-view .list-item {
   display: grid;
-  grid-template-columns: 50px 60px 1fr 50px;
+  grid-template-columns: 50px 60px 1fr 50px 50px;
   gap: 8px;
   align-items: center;
   padding: 12px;
@@ -715,17 +747,64 @@ footer.totals-panel.success {
 
 @media (max-width: 480px) {
   #list-view .list-header {
-    grid-template-columns: 45px 60px 1fr 45px;
+    grid-template-columns: 45px 60px 1fr 45px 50px;
   }
 
   #list-view .list-item {
-    grid-template-columns: 45px 60px 1fr 45px;
+    grid-template-columns: 45px 60px 1fr 45px 50px;
+  }
+
+  .delete-btn {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    font-size: 18px;
+  }
+
+  .totals-grid {
+    gap: 8px;
+  }
+
+  .total-value {
+    font-size: 18px;
+  }
+
+  .total-label {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  #list-view .list-header {
+    grid-template-columns: 45px 60px 1fr 45px 50px;
+  }
+
+  #list-view .list-item {
+    grid-template-columns: 45px 60px 1fr 45px 50px;
     padding: 10px;
+  }
+
+  .delete-btn {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    font-size: 18px;
   }
 
   .check-btn {
     width: 36px;
     height: 36px;
     font-size: 18px;
+  }
+
+  .col-drag {
+    width: 40px;
+  }
+
+  .drag-handle {
+    font-size: 22px;
+    padding: 4px 8px;
   }
 }

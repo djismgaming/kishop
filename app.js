@@ -4,6 +4,7 @@ const API_BASE = '/api';
 let appData = {
   maxBudget: 0,
   items: [],
+  listItems: [],
   currentView: 'shopping'
 };
 
@@ -31,8 +32,20 @@ async function loadItems() {
   }
 }
 
+async function loadListItems() {
+  try {
+    const response = await fetch(`${API_BASE}/list-items`);
+    if (response.ok) {
+      const data = await response.json();
+      appData.listItems = data.items;
+    }
+  } catch (e) {
+    console.error('Error loading list items:', e);
+  }
+}
+
 async function loadData() {
-  await Promise.all([loadBudget(), loadItems()]);
+  await Promise.all([loadBudget(), loadItems(), loadListItems()]);
 }
 
 function saveBudget(value) {
@@ -55,10 +68,16 @@ function saveItem(index, field, value) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(item)
     }).catch(e => console.error('Error saving item:', e));
+  } else {
+    appData.items.pendingUpdates = appData.items.pendingUpdates || {};
+    appData.items.pendingUpdates[item] = appData.items.pendingUpdates[item] || {};
+    appData.items.pendingUpdates[item][field] = value;
   }
 }
 
 function saveNewItem(item) {
+  appData.items.pendingUpdates = appData.items.pendingUpdates || {};
+  
   fetch(`${API_BASE}/items`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -69,6 +88,19 @@ function saveNewItem(item) {
       const lastItem = appData.items[appData.items.length - 1];
       if (lastItem) {
         lastItem.id = data.id;
+        
+        const pending = appData.items.pendingUpdates[lastItem];
+        if (pending) {
+          Object.entries(pending).forEach(([field, value]) => {
+            lastItem[field] = value;
+          });
+          fetch(`${API_BASE}/items/${lastItem.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(lastItem)
+          }).catch(e => console.error('Error saving item:', e));
+          delete appData.items.pendingUpdates[lastItem];
+        }
       }
     }
   }).catch(e => console.error('Error adding item:', e));
@@ -78,6 +110,78 @@ function deleteItem(id) {
   fetch(`${API_BASE}/items/${id}`, {
     method: 'DELETE'
   }).catch(e => console.error('Error deleting item:', e));
+}
+
+function saveNewListItem(item) {
+  appData.listItems.pendingUpdates = appData.listItems.pendingUpdates || {};
+  
+  fetch(`${API_BASE}/list-items`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(item)
+  }).then(async response => {
+    if (response.ok) {
+      const data = await response.json();
+      const lastItem = appData.listItems[appData.listItems.length - 1];
+      if (lastItem) {
+        lastItem.id = data.id;
+        
+        const pending = appData.listItems.pendingUpdates[lastItem];
+        if (pending) {
+          Object.entries(pending).forEach(([field, value]) => {
+            lastItem[field] = value;
+          });
+          fetch(`${API_BASE}/list-items/${lastItem.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(lastItem)
+          }).catch(e => console.error('Error saving list item:', e));
+          delete appData.listItems.pendingUpdates[lastItem];
+        }
+      }
+    }
+  }).catch(e => console.error('Error adding list item:', e));
+}
+
+function saveListItem(index, field, value) {
+  appData.listItems[index][field] = value;
+  const item = appData.listItems[index];
+  if (item.id) {
+    fetch(`${API_BASE}/list-items/${item.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(item)
+    }).catch(e => console.error('Error saving list item:', e));
+  } else {
+    appData.listItems.pendingUpdates = appData.listItems.pendingUpdates || {};
+    appData.listItems.pendingUpdates[item] = appData.listItems.pendingUpdates[item] || {};
+    appData.listItems.pendingUpdates[item][field] = value;
+  }
+}
+
+function deleteListItem(id) {
+  fetch(`${API_BASE}/list-items/${id}`, {
+    method: 'DELETE'
+  }).catch(e => console.error('Error deleting list item:', e));
+}
+
+function toggleListItemComplete(id) {
+  const index = appData.listItems.findIndex(item => item.id === id);
+  if (index === -1) return;
+  
+  const item = appData.listItems[index];
+  item.completed = !item.completed;
+  
+  renderActiveItems();
+  renderCompletedItems();
+  
+  if (item.id) {
+    fetch(`${API_BASE}/list-items/${item.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ completed: item.completed })
+    }).catch(e => console.error('Error updating complete:', e));
+  }
 }
 
 function formatCurrency(amount) {
@@ -112,7 +216,7 @@ function updateTotalsDisplay() {
   document.getElementById('grand-total').textContent = formatCurrency(totals.grandTotal);
 
   const footer = document.querySelector('footer.totals-panel');
-  footer.classList.remove('warning', 'danger');
+  footer.classList.remove('warning', 'danger', 'success');
 
   if (maxBudget > 0) {
     const percentage = (totals.subtotal / maxBudget) * 100;
@@ -123,6 +227,8 @@ function updateTotalsDisplay() {
     } else {
       footer.classList.add('success');
     }
+  } else {
+    footer.classList.add('success');
   }
 }
 
@@ -257,7 +363,6 @@ function createListItemElement(item, index) {
   div.className = `list-item ${item.completed ? 'completed' : ''}`;
   div.dataset.index = index;
   div.dataset.id = item.id;
-  div.draggable = true;
   
   div.innerHTML = `
     <div class="col-check">
@@ -272,6 +377,9 @@ function createListItemElement(item, index) {
     <div class="col-action">
       <button class="delete-btn" aria-label="Delete item">&times;</button>
     </div>
+    <div class="col-drag">
+      <span class="drag-handle" aria-label="Drag to reorder">☰</span>
+    </div>
   `;
   
   const checkBtn = div.querySelector('.check-btn');
@@ -280,36 +388,126 @@ function createListItemElement(item, index) {
   const deleteBtn = div.querySelector('.delete-btn');
   
   checkBtn.addEventListener('click', () => {
-    toggleItemComplete(item.id);
+    toggleListItemComplete(item.id);
   });
   
   qtyInput.addEventListener('input', () => {
-    saveItem(index, 'quantity', qtyInput.value);
+    saveListItem(index, 'quantity', qtyInput.value);
   });
   
   nameInput.addEventListener('input', () => {
-    saveItem(index, 'name', nameInput.value);
+    saveListItem(index, 'name', nameInput.value);
   });
   
   deleteBtn.addEventListener('click', () => {
     const itemId = item.id;
-    appData.items.splice(index, 1);
+    appData.listItems.splice(index, 1);
     if (itemId) {
-      fetch(`${API_BASE}/items/${itemId}`, {
-        method: 'DELETE'
-      }).catch(e => console.error('Error deleting item:', e));
+      deleteListItem(itemId);
     }
     renderActiveItems();
     renderCompletedItems();
   });
   
-  div.addEventListener('dragstart', handleDragStart);
-  div.addEventListener('dragend', handleDragEnd);
+  const dragHandle = div.querySelector('.drag-handle');
+  if (dragHandle) {
+    dragHandle.addEventListener('mousedown', handleDragStart, { passive: false });
+    dragHandle.addEventListener('touchstart', handleDragStart, { passive: false });
+  }
   
   return div;
 }
 
-function addEmptyRow() {
+let dragItem = null;
+let dragClone = null;
+let isDragging = false;
+
+function handleDragStart(e) {
+  const handle = e.target.closest('.drag-handle');
+  if (!handle) return;
+  
+  const item = handle.closest('.list-item');
+  if (!item || item.classList.contains('completed')) return;
+  
+  e.preventDefault();
+  isDragging = true;
+  dragItem = item;
+  
+  item.classList.add('dragging');
+  
+  dragClone = item.cloneNode(true);
+  dragClone.style.position = 'fixed';
+  dragClone.style.width = item.offsetWidth + 'px';
+  dragClone.style.zIndex = '9999';
+  dragClone.style.opacity = '0.8';
+  dragClone.style.pointerEvents = 'none';
+  document.body.appendChild(dragClone);
+  
+  if (e.type === 'touchstart') {
+    updateClonePosition(e.touches[0]);
+  } else {
+    updateClonePosition(e);
+  }
+  
+  document.addEventListener('mousemove', handleDragMove);
+  document.addEventListener('touchmove', handleDragMove, { passive: false });
+  document.addEventListener('mouseup', handleDragEnd);
+  document.addEventListener('touchend', handleDragEnd);
+}
+
+function handleDragMove(e) {
+  if (!dragItem || !dragClone || !isDragging) return;
+  e.preventDefault();
+  
+  let clientX, clientY;
+  if (e.type === 'touchmove') {
+    clientX = e.touches[0].clientX;
+    clientY = e.touches[0].clientY;
+  } else {
+    clientX = e.clientX;
+    clientY = e.clientY;
+  }
+  
+  dragClone.style.left = (clientX - 50) + 'px';
+  dragClone.style.top = (clientY - 25) + 'px';
+  
+  const container = document.getElementById('active-items');
+  const items = Array.from(container.querySelectorAll('.list-item:not(.dragging)'));
+  
+  for (const item of items) {
+    const rect = item.getBoundingClientRect();
+    const midY = rect.top + rect.height / 2;
+    
+    if (clientY < midY) {
+      container.insertBefore(dragItem, item);
+      break;
+    } else if (item === items[items.length - 1]) {
+      container.appendChild(dragItem);
+    }
+  }
+}
+
+function handleDragEnd(e) {
+  if (!dragItem) return;
+  
+  dragItem.classList.remove('dragging');
+  if (dragClone) {
+    dragClone.remove();
+    dragClone = null;
+  }
+  
+  isDragging = false;
+  dragItem = null;
+  
+  document.removeEventListener('mousemove', handleDragMove);
+  document.removeEventListener('touchmove', handleDragMove);
+  document.removeEventListener('mouseup', handleDragEnd);
+  document.removeEventListener('touchend', handleDragEnd);
+  
+  handleListDragEnd(e);
+}
+
+function renderActiveItems() {
   const item = { quantity: '1', price: '' };
   appData.items.push(item);
   renderList();
@@ -381,6 +579,8 @@ async function refreshData() {
   
   await loadData();
   renderList();
+  renderActiveItems();
+  renderCompletedItems();
   updateTotalsDisplay();
   ensureEmptyRow();
   
@@ -433,19 +633,12 @@ async function init() {
 
   document.getElementById('clear-all').addEventListener('click', clearAll);
   document.getElementById('refresh-btn').addEventListener('click', refreshData);
-  document.getElementById('add-item-btn').addEventListener('click', () => {
-    addEmptyRow();
-  });
 
   renderList();
+  renderActiveItems();
+  renderCompletedItems();
   updateTotalsDisplay();
   ensureEmptyRow();
-  
-  const activeContainer = document.getElementById('active-items');
-  if (activeContainer) {
-    activeContainer.addEventListener('dragover', handleDragOver);
-    activeContainer.addEventListener('dragenter', (e) => e.preventDefault());
-  }
   
   document.getElementById('toggle-shopping').addEventListener('click', () => toggleView('shopping'));
   document.getElementById('toggle-list').addEventListener('click', () => toggleView('list'));
@@ -458,76 +651,44 @@ async function init() {
   });
 }
 
-let dragItem = null;
-let dragIndex = null;
-let positionsToUpdate = [];
+let listPositionsToUpdate = [];
 
-function handleDragStart(e) {
-  const item = e.target.closest('.list-item');
-  if (!item || item.classList.contains('completed') || item.classList.contains('dragging')) return;
-  
-  dragItem = item;
-  dragIndex = parseInt(item.dataset.index);
-  item.classList.add('dragging');
-  e.dataTransfer.effect = 'move';
-  e.dataTransfer.setData('text/plain', dragIndex);
-}
-
-function handleDragOver(e) {
-  e.preventDefault();
-  const item = e.target.closest('.list-item');
-  if (!item || item.classList.contains('completed') || item === dragItem) return;
-  
-  const targetIndex = parseInt(item.dataset.index);
-  const container = document.getElementById('active-items');
-  
-  if (targetIndex < dragIndex) {
-    container.insertBefore(dragItem, item);
-  } else {
-    const nextItem = item.nextElementSibling;
-    if (nextItem && nextItem.classList.contains('list-item')) {
-      container.insertBefore(dragItem, nextItem);
-    } else {
-      container.appendChild(dragItem);
-    }
-  }
-}
-
-function handleDragEnd(e) {
+function handleListDragEnd(e) {
   const container = document.getElementById('active-items');
   const currentItems = Array.from(container.querySelectorAll('.list-item:not(.completed)'));
   
-  positionsToUpdate = currentItems.map((item, index) => ({
+  listPositionsToUpdate = currentItems.map((item, index) => ({
     id: item.dataset.id,
     position: index
   }));
   
-  if (positionsToUpdate.length > 0) {
-    fetch(`${API_BASE}/items/position`, {
+  if (listPositionsToUpdate.length > 0) {
+    fetch(`${API_BASE}/list-items`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ positions: positionsToUpdate })
+      body: JSON.stringify({ items: listPositionsToUpdate.map((p, i) => ({
+        ...p,
+        quantity: currentItems[i].querySelector('.col-qty input')?.value || '1',
+        name: currentItems[i].querySelector('.col-name input')?.value || '',
+        completed: false
+      })) })
     }).then(async response => {
       if (response.ok) {
-        const data = await response.json();
-        appData.items.forEach(item => {
-          const pos = positionsToUpdate.find(p => p.id === item.id);
+        appData.listItems.forEach(item => {
+          const pos = listPositionsToUpdate.find(p => p.id === item.id);
           if (pos) {
             item.position = pos.position;
           }
         });
-        appData.items.sort((a, b) => a.position - b.position);
+        appData.listItems.sort((a, b) => a.position - b.position);
       }
-    }).catch(e => console.error('Error updating positions:', e));
+    }).catch(e => console.error('Error updating list positions:', e));
   }
-  
-  dragItem.classList.remove('dragging');
-  dragItem = null;
 }
 
 function renderActiveItems() {
   const container = document.getElementById('active-items');
-  const active = appData.items.filter(item => !item.completed);
+  const active = appData.listItems.filter(item => !item.completed);
   
   if (active.length === 0) {
     container.innerHTML = '<div class="empty-state">No active items</div>';
@@ -536,7 +697,7 @@ function renderActiveItems() {
   
   container.innerHTML = '';
   active.forEach((item, index) => {
-    const originalIndex = appData.items.findIndex(it => it.id === item.id);
+    const originalIndex = appData.listItems.findIndex(it => it.id === item.id);
     const el = createListItemElement(item, originalIndex);
     container.appendChild(el);
   });
@@ -544,7 +705,7 @@ function renderActiveItems() {
 
 function renderCompletedItems() {
   const container = document.getElementById('completed-items');
-  const completed = appData.items.filter(item => item.completed);
+  const completed = appData.listItems.filter(item => item.completed);
   
   const section = document.getElementById('completed-section');
   
@@ -556,7 +717,7 @@ function renderCompletedItems() {
   section.classList.remove('hidden');
   container.innerHTML = '';
   completed.forEach((item, index) => {
-    const originalIndex = appData.items.findIndex(it => it.id === item.id);
+    const originalIndex = appData.listItems.findIndex(it => it.id === item.id);
     const el = createListItemElement(item, originalIndex);
     el.classList.add('completed');
     container.appendChild(el);
@@ -580,11 +741,11 @@ function toggleItemComplete(id) {
 }
 
 function addItemToList() {
-  const item = { quantity: '1', price: '', completed: false };
-  appData.items.push(item);
+  const item = { quantity: '1', name: '', completed: false };
+  appData.listItems.push(item);
   renderActiveItems();
   renderCompletedItems();
-  saveNewItem(item);
+  saveNewListItem(item);
   
   const container = document.getElementById('active-items');
   const lastItem = container.lastElementChild;
