@@ -402,7 +402,7 @@ function bulkUpdateListItems(items, callback) {
       return;
     }
     
-    const stmt = db.prepare('UPDATE list_items SET quantity = ?, name = ?, position = ?, completed = ? WHERE id = ?');
+    const stmt = db.prepare('UPDATE list_items SET quantity = ?, name = ?, position = ?, completed = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?');
     let error = null;
     let remaining = items.length;
     

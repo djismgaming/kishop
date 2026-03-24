@@ -79,6 +79,8 @@ function saveItem(index, field, value) {
 }
 
 function saveNewItem(item) {
+  const itemKey = item;
+  
   fetch(`${API_BASE}/items`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -86,22 +88,19 @@ function saveNewItem(item) {
   }).then(async response => {
     if (response.ok) {
       const data = await response.json();
-      const lastItem = appData.items[appData.items.length - 1];
-      if (lastItem) {
-        lastItem.id = data.id;
-        
-        const pending = appData.itemsPendingUpdates.get(lastItem);
-        if (pending) {
-          Object.entries(pending).forEach(([field, value]) => {
-            lastItem[field] = value;
-          });
-          fetch(`${API_BASE}/items/${lastItem.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(lastItem)
-          }).catch(e => console.error('Error saving item:', e));
-          appData.itemsPendingUpdates.delete(lastItem);
-        }
+      itemKey.id = data.id;
+      
+      const pending = appData.itemsPendingUpdates.get(itemKey);
+      if (pending) {
+        Object.entries(pending).forEach(([field, value]) => {
+          itemKey[field] = value;
+        });
+        fetch(`${API_BASE}/items/${itemKey.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(itemKey)
+        }).catch(e => console.error('Error saving item:', e));
+        appData.itemsPendingUpdates.delete(itemKey);
       }
     }
   }).catch(e => console.error('Error adding item:', e));
@@ -114,6 +113,8 @@ function deleteItem(id) {
 }
 
 function saveNewListItem(item) {
+  const itemKey = item;
+  
   fetch(`${API_BASE}/list-items`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -121,22 +122,22 @@ function saveNewListItem(item) {
   }).then(async response => {
     if (response.ok) {
       const data = await response.json();
-      const lastItem = appData.listItems[appData.listItems.length - 1];
-      if (lastItem) {
-        lastItem.id = data.id;
-        
-        const pending = appData.listItemsPendingUpdates.get(lastItem);
-        if (pending) {
-          Object.entries(pending).forEach(([field, value]) => {
-            lastItem[field] = value;
-          });
-          fetch(`${API_BASE}/list-items/${lastItem.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(lastItem)
-          }).catch(e => console.error('Error saving list item:', e));
-          appData.listItemsPendingUpdates.delete(lastItem);
-        }
+      itemKey.id = data.id;
+      
+      renderActiveItems();
+      renderCompletedItems();
+      
+      const pending = appData.listItemsPendingUpdates.get(itemKey);
+      if (pending) {
+        Object.entries(pending).forEach(([field, value]) => {
+          itemKey[field] = value;
+        });
+        fetch(`${API_BASE}/list-items/${itemKey.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(itemKey)
+        }).catch(e => console.error('Error saving list item:', e));
+        appData.listItemsPendingUpdates.delete(itemKey);
       }
     }
   }).catch(e => console.error('Error adding list item:', e));
@@ -507,7 +508,7 @@ function handleDragEnd(e) {
   handleListDragEnd(e);
 }
 
-function renderActiveItems() {
+function addEmptyRow() {
   const item = { quantity: '1', price: '' };
   appData.items.push(item);
   renderList();
