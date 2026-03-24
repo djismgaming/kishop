@@ -5,7 +5,9 @@ let appData = {
   maxBudget: 0,
   items: [],
   listItems: [],
-  currentView: 'shopping'
+  currentView: 'shopping',
+  itemsPendingUpdates: new Map(),
+  listItemsPendingUpdates: new Map()
 };
 
 async function loadBudget() {
@@ -69,15 +71,14 @@ function saveItem(index, field, value) {
       body: JSON.stringify(item)
     }).catch(e => console.error('Error saving item:', e));
   } else {
-    appData.items.pendingUpdates = appData.items.pendingUpdates || {};
-    appData.items.pendingUpdates[item] = appData.items.pendingUpdates[item] || {};
-    appData.items.pendingUpdates[item][field] = value;
+    if (!appData.itemsPendingUpdates.has(item)) {
+      appData.itemsPendingUpdates.set(item, {});
+    }
+    appData.itemsPendingUpdates.get(item)[field] = value;
   }
 }
 
 function saveNewItem(item) {
-  appData.items.pendingUpdates = appData.items.pendingUpdates || {};
-  
   fetch(`${API_BASE}/items`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -89,7 +90,7 @@ function saveNewItem(item) {
       if (lastItem) {
         lastItem.id = data.id;
         
-        const pending = appData.items.pendingUpdates[lastItem];
+        const pending = appData.itemsPendingUpdates.get(lastItem);
         if (pending) {
           Object.entries(pending).forEach(([field, value]) => {
             lastItem[field] = value;
@@ -99,7 +100,7 @@ function saveNewItem(item) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(lastItem)
           }).catch(e => console.error('Error saving item:', e));
-          delete appData.items.pendingUpdates[lastItem];
+          appData.itemsPendingUpdates.delete(lastItem);
         }
       }
     }
@@ -113,8 +114,6 @@ function deleteItem(id) {
 }
 
 function saveNewListItem(item) {
-  appData.listItems.pendingUpdates = appData.listItems.pendingUpdates || {};
-  
   fetch(`${API_BASE}/list-items`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -126,7 +125,7 @@ function saveNewListItem(item) {
       if (lastItem) {
         lastItem.id = data.id;
         
-        const pending = appData.listItems.pendingUpdates[lastItem];
+        const pending = appData.listItemsPendingUpdates.get(lastItem);
         if (pending) {
           Object.entries(pending).forEach(([field, value]) => {
             lastItem[field] = value;
@@ -136,7 +135,7 @@ function saveNewListItem(item) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(lastItem)
           }).catch(e => console.error('Error saving list item:', e));
-          delete appData.listItems.pendingUpdates[lastItem];
+          appData.listItemsPendingUpdates.delete(lastItem);
         }
       }
     }
@@ -153,9 +152,10 @@ function saveListItem(index, field, value) {
       body: JSON.stringify(item)
     }).catch(e => console.error('Error saving list item:', e));
   } else {
-    appData.listItems.pendingUpdates = appData.listItems.pendingUpdates || {};
-    appData.listItems.pendingUpdates[item] = appData.listItems.pendingUpdates[item] || {};
-    appData.listItems.pendingUpdates[item][field] = value;
+    if (!appData.listItemsPendingUpdates.has(item)) {
+      appData.listItemsPendingUpdates.set(item, {});
+    }
+    appData.listItemsPendingUpdates.get(item)[field] = value;
   }
 }
 
@@ -658,7 +658,7 @@ function handleListDragEnd(e) {
   const currentItems = Array.from(container.querySelectorAll('.list-item:not(.completed)'));
   
   listPositionsToUpdate = currentItems.map((item, index) => ({
-    id: item.dataset.id,
+    id: parseInt(item.dataset.id, 10),
     position: index
   }));
   
@@ -668,6 +668,7 @@ function handleListDragEnd(e) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ items: listPositionsToUpdate.map((p, i) => ({
         ...p,
+        id: p.id,
         quantity: currentItems[i].querySelector('.col-qty input')?.value || '1',
         name: currentItems[i].querySelector('.col-name input')?.value || '',
         completed: false

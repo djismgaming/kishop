@@ -131,18 +131,18 @@ app.get('/api/list-items', (req, res) => {
 
 app.post('/api/list-items', (req, res) => {
   const item = { quantity: req.body.quantity, name: req.body.name };
-  db.addListItem(item, (err, id) => {
+  db.addListItem(item, (err, row) => {
     if (err) {
       console.error('Error adding list item:', err);
       res.status(500).json({ error: 'Failed to add list item' });
     } else {
-      res.json({ id, ...item });
+      res.json(row);
     }
   });
 });
 
 app.put('/api/list-items', (req, res) => {
-  const items = req.body.items;
+  const items = Array.isArray(req.body.items) ? req.body.items : [];
   db.bulkUpdateListItems(items, (err) => {
     if (err) {
       console.error('Error bulk updating list items:', err);

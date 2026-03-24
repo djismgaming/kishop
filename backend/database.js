@@ -54,10 +54,12 @@ db.run(`
               `, (err) => {
                 if (err) {
                   console.error('Error creating list_items table:', err);
+                  reject(err);
+                } else {
+                  migrateAddMissingColumns().then(() => {
+                    ensureInitialData().then(resolve).catch(reject);
+                  }).catch(reject);
                 }
-                migrateAddMissingColumns().then(() => {
-                  ensureInitialData().then(resolve).catch(reject);
-                }).catch(reject);
               });
             }
           });
@@ -337,7 +339,7 @@ function bulkUpdatePositions(positions, callback) {
 function getListItems(callback) {
   db.all('SELECT id, quantity, name, position, completed FROM list_items ORDER BY position ASC', [], (err, rows) => {
     if (err) callback(err);
-    else callback(null, rows);
+    else callback(null, rows || []);
   });
 }
 
@@ -345,7 +347,13 @@ function addListItem(item, callback) {
   const stmt = db.prepare('INSERT INTO list_items (quantity, name, position) SELECT ?, ?, COALESCE(MAX(position), -1) + 1 FROM list_items');
   stmt.run([item.quantity, item.name || ''], function(err) {
     if (err) callback(err);
-    else callback(null, this.lastID);
+    else {
+      const lastID = this.lastID;
+      db.get('SELECT id, quantity, name, position, completed FROM list_items WHERE id = ?', [lastID], (err, row) => {
+        if (err) callback(err);
+        else callback(null, row);
+      });
+    }
   });
   stmt.finalize();
 }
@@ -373,7 +381,7 @@ function updateListItem(id, item, callback) {
   }
   
   values.push(id);
-  const sql = `UPDATE list_items SET ${updates.join(', ')} WHERE id = ?`;
+  const sql = `UPDATE list_items SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`;
   db.run(sql, values, function(err) {
     if (err) callback(err);
     else callback(null, this.changes);
@@ -388,8 +396,11 @@ function deleteListItem(id, callback) {
 }
 
 function bulkUpdateListItems(items, callback) {
-  db.serialize(() => {
-    db.run('BEGIN TRANSACTION');
+  db.run('BEGIN TRANSACTION', (beginErr) => {
+    if (beginErr) {
+      callback(beginErr);
+      return;
+    }
     
     const stmt = db.prepare('UPDATE list_items SET quantity = ?, name = ?, position = ?, completed = ? WHERE id = ?');
     let error = null;
@@ -412,13 +423,20 @@ function bulkUpdateListItems(items, callback) {
         remaining--;
         if (remaining === 0) {
           stmt.finalize((finalizeError) => {
-            db.run('COMMIT', (commitErr) => {
-              if (error || finalizeError || commitErr) {
-                callback(error || finalizeError || commitErr);
-              } else {
-                callback(null);
-              }
-            });
+            const finalError = finalizeError || error;
+            if (finalError) {
+              db.run('ROLLBACK', (rbErr) => {
+                callback(finalError || rbErr);
+              });
+            } else {
+              db.run('COMMIT', (commitErr) => {
+                if (commitErr) {
+                  callback(commitErr);
+                } else {
+                  callback(null);
+                }
+              });
+            }
           });
         }
       });
