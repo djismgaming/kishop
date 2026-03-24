@@ -380,6 +380,7 @@ function createListItemElement(item, index) {
   div.className = `list-item ${item.completed ? 'completed' : ''} ${item.saving ? 'saving' : ''}`;
   div.dataset.index = index;
   div.dataset.id = item.id;
+  div.draggable = true;
   
   div.innerHTML = `
     <div class="col-check">
@@ -395,7 +396,7 @@ function createListItemElement(item, index) {
       <button class="delete-btn" aria-label="Delete item" ${item.saving ? 'disabled' : ''}>&times;</button>
     </div>
     <div class="col-drag">
-      <span class="drag-handle ${item.saving ? 'disabled' : ''}" aria-label="Drag to reorder">☰</span>
+      <span class="drag-handle" aria-label="Drag to reorder">☰</span>
     </div>
   `;
   
@@ -428,101 +429,53 @@ function createListItemElement(item, index) {
     renderCompletedItems();
   });
   
-  const dragHandle = div.querySelector('.drag-handle');
-  if (dragHandle) {
-    dragHandle.addEventListener('mousedown', handleDragStart, { passive: false });
-    dragHandle.addEventListener('touchstart', handleDragStart, { passive: false });
-  }
+  div.addEventListener('dragstart', handleDragStart);
+  div.addEventListener('dragend', handleDragEnd);
   
   return div;
 }
 
 let dragItem = null;
-let dragClone = null;
-let isDragging = false;
+let dragIndex = null;
+let positionsToUpdate = [];
 
 function handleDragStart(e) {
-  const handle = e.target.closest('.drag-handle');
-  if (!handle) return;
+  const item = e.target.closest('.list-item');
+  if (!item || item.classList.contains('completed') || item.classList.contains('dragging')) return;
   
-  const item = handle.closest('.list-item');
-  if (!item || item.classList.contains('completed')) return;
-  
-  e.preventDefault();
-  isDragging = true;
   dragItem = item;
-  
+  dragIndex = parseInt(item.dataset.index);
   item.classList.add('dragging');
-  
-  dragClone = item.cloneNode(true);
-  dragClone.style.position = 'fixed';
-  dragClone.style.width = item.offsetWidth + 'px';
-  dragClone.style.zIndex = '9999';
-  dragClone.style.opacity = '0.8';
-  dragClone.style.pointerEvents = 'none';
-  document.body.appendChild(dragClone);
-  
-  if (e.type === 'touchstart') {
-    updateClonePosition(e.touches[0]);
-  } else {
-    updateClonePosition(e);
-  }
-  
-  document.addEventListener('mousemove', handleDragMove);
-  document.addEventListener('touchmove', handleDragMove, { passive: false });
-  document.addEventListener('mouseup', handleDragEnd);
-  document.addEventListener('touchend', handleDragEnd);
+  e.dataTransfer.effect = 'move';
+  e.dataTransfer.setData('text/plain', dragIndex);
 }
 
-function handleDragMove(e) {
-  if (!dragItem || !dragClone || !isDragging) return;
+function handleDragOver(e) {
   e.preventDefault();
+  const item = e.target.closest('.list-item');
+  if (!item || item.classList.contains('completed') || item === dragItem) return;
   
-  let clientX, clientY;
-  if (e.type === 'touchmove') {
-    clientX = e.touches[0].clientX;
-    clientY = e.touches[0].clientY;
-  } else {
-    clientX = e.clientX;
-    clientY = e.clientY;
-  }
-  
-  dragClone.style.left = (clientX - 50) + 'px';
-  dragClone.style.top = (clientY - 25) + 'px';
-  
+  const targetIndex = parseInt(item.dataset.index);
   const container = document.getElementById('active-items');
-  const items = Array.from(container.querySelectorAll('.list-item:not(.dragging)'));
   
-  for (const item of items) {
-    const rect = item.getBoundingClientRect();
-    const midY = rect.top + rect.height / 2;
-    
-    if (clientY < midY) {
-      container.insertBefore(dragItem, item);
-      break;
-    } else if (item === items[items.length - 1]) {
+  if (targetIndex < dragIndex) {
+    container.insertBefore(dragItem, item);
+  } else {
+    const nextItem = item.nextElementSibling;
+    if (nextItem && nextItem.classList.contains('list-item')) {
+      container.insertBefore(dragItem, nextItem);
+    } else {
       container.appendChild(dragItem);
     }
   }
+  
+  dragIndex = Array.from(container.querySelectorAll('.list-item:not(.completed)')).indexOf(dragItem);
 }
 
 function handleDragEnd(e) {
-  if (!dragItem) return;
-  
   dragItem.classList.remove('dragging');
-  if (dragClone) {
-    dragClone.remove();
-    dragClone = null;
-  }
-  
-  isDragging = false;
   dragItem = null;
-  
-  document.removeEventListener('mousemove', handleDragMove);
-  document.removeEventListener('touchmove', handleDragMove);
-  document.removeEventListener('mouseup', handleDragEnd);
-  document.removeEventListener('touchend', handleDragEnd);
-  
+  dragIndex = null;
   handleListDragEnd(e);
 }
 
@@ -658,6 +611,12 @@ async function init() {
   renderCompletedItems();
   updateTotalsDisplay();
   ensureEmptyRow();
+  
+  const activeContainer = document.getElementById('active-items');
+  if (activeContainer) {
+    activeContainer.addEventListener('dragover', handleDragOver);
+    activeContainer.addEventListener('dragenter', (e) => e.preventDefault());
+  }
   
   document.getElementById('toggle-shopping').addEventListener('click', () => toggleView('shopping'));
   document.getElementById('toggle-list').addEventListener('click', () => toggleView('list'));
