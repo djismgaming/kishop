@@ -80,6 +80,8 @@ function saveItem(index, field, value) {
 
 function saveNewItem(item) {
   const itemKey = item;
+  itemKey.saving = true;
+  renderList();
   
   fetch(`${API_BASE}/items`, {
     method: 'POST',
@@ -89,6 +91,8 @@ function saveNewItem(item) {
     if (response.ok) {
       const data = await response.json();
       itemKey.id = data.id;
+      itemKey.saving = false;
+      renderList();
       
       const pending = appData.itemsPendingUpdates.get(itemKey);
       if (pending) {
@@ -103,7 +107,11 @@ function saveNewItem(item) {
         appData.itemsPendingUpdates.delete(itemKey);
       }
     }
-  }).catch(e => console.error('Error adding item:', e));
+  }).catch(e => {
+    itemKey.saving = false;
+    renderList();
+    console.error('Error adding item:', e);
+  });
 }
 
 function deleteItem(id) {
@@ -114,6 +122,7 @@ function deleteItem(id) {
 
 function saveNewListItem(item) {
   const itemKey = item;
+  itemKey.saving = true;
   
   fetch(`${API_BASE}/list-items`, {
     method: 'POST',
@@ -123,6 +132,7 @@ function saveNewListItem(item) {
     if (response.ok) {
       const data = await response.json();
       itemKey.id = data.id;
+      itemKey.saving = false;
       
       renderActiveItems();
       renderCompletedItems();
@@ -140,7 +150,12 @@ function saveNewListItem(item) {
         appData.listItemsPendingUpdates.delete(itemKey);
       }
     }
-  }).catch(e => console.error('Error adding list item:', e));
+  }).catch(e => {
+    itemKey.saving = false;
+    renderActiveItems();
+    renderCompletedItems();
+    console.error('Error adding list item:', e);
+  });
 }
 
 function saveListItem(index, field, value) {
@@ -235,7 +250,7 @@ function updateTotalsDisplay() {
 
 function createItemElement(item, index) {
   const div = document.createElement('div');
-  div.className = 'list-item';
+  div.className = `list-item ${item.saving ? 'saving' : ''}`;
   div.dataset.index = index;
 
   div.innerHTML = `
@@ -262,7 +277,7 @@ function createItemElement(item, index) {
       >
     </div>
     <div class="col-action">
-      <button class="delete-btn" aria-label="Delete item">
+      <button class="delete-btn" aria-label="Delete item" ${item.saving ? 'disabled' : ''}>
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="3 6 5 6 21 6"></polyline>
           <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -302,6 +317,7 @@ function createItemElement(item, index) {
   });
 
   deleteBtn.addEventListener('click', () => {
+    if (item.saving) return;
     const item = appData.items[index];
     appData.items.splice(index, 1);
     if (item.id) {
@@ -361,13 +377,13 @@ function toggleView(view) {
 
 function createListItemElement(item, index) {
   const div = document.createElement('div');
-  div.className = `list-item ${item.completed ? 'completed' : ''}`;
+  div.className = `list-item ${item.completed ? 'completed' : ''} ${item.saving ? 'saving' : ''}`;
   div.dataset.index = index;
   div.dataset.id = item.id;
   
   div.innerHTML = `
     <div class="col-check">
-      <button class="check-btn" aria-label="Toggle complete">✓</button>
+      <button class="check-btn" aria-label="Toggle complete" ${item.saving ? 'disabled' : ''}>✓</button>
     </div>
     <div class="col-qty">
       <input type="number" value="${item.quantity || ''}" placeholder="0" min="0" step="1">
@@ -376,10 +392,10 @@ function createListItemElement(item, index) {
       <input type="text" value="${item.name || ''}" placeholder="Item name">
     </div>
     <div class="col-action">
-      <button class="delete-btn" aria-label="Delete item">&times;</button>
+      <button class="delete-btn" aria-label="Delete item" ${item.saving ? 'disabled' : ''}>&times;</button>
     </div>
     <div class="col-drag">
-      <span class="drag-handle" aria-label="Drag to reorder">☰</span>
+      <span class="drag-handle ${item.saving ? 'disabled' : ''}" aria-label="Drag to reorder">☰</span>
     </div>
   `;
   
@@ -389,6 +405,7 @@ function createListItemElement(item, index) {
   const deleteBtn = div.querySelector('.delete-btn');
   
   checkBtn.addEventListener('click', () => {
+    if (item.saving) return;
     toggleListItemComplete(item.id);
   });
   
@@ -401,6 +418,7 @@ function createListItemElement(item, index) {
   });
   
   deleteBtn.addEventListener('click', () => {
+    if (item.saving) return;
     const itemId = item.id;
     appData.listItems.splice(index, 1);
     if (itemId) {

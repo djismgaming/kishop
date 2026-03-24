@@ -190,6 +190,21 @@ main.shopping-list-container {
   opacity: 0.5;
 }
 
+.list-item.saving {
+  opacity: 0.6;
+}
+
+.list-item.saving .check-btn,
+.list-item.saving .delete-btn {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.drag-handle.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .delete-btn {
   width: 36px;
   height: 36px;
