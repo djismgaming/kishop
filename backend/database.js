@@ -28,25 +28,41 @@ function initDatabase() {
           )
         `);
 
-       db.run(`
-           CREATE TABLE IF NOT EXISTS shopping_items (
-             id INTEGER PRIMARY KEY AUTOINCREMENT,
-             quantity TEXT NOT NULL DEFAULT '1',
-             price TEXT DEFAULT '',
-             name TEXT DEFAULT '',
-             position INTEGER NOT NULL,
-             completed INTEGER DEFAULT 0,
-             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-           )
+db.run(`
+            CREATE TABLE IF NOT EXISTS shopping_items (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              quantity TEXT NOT NULL DEFAULT '1',
+              price TEXT DEFAULT '',
+              name TEXT DEFAULT '',
+              position INTEGER NOT NULL,
+              completed INTEGER DEFAULT 0,
+              updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
 `, (err) => {
-           if (err) {
-             reject(err);
-           } else {
-             migrateAddMissingColumns().then(() => {
-               ensureInitialData().then(resolve).catch(reject);
-             }).catch(reject);
-           }
-         });
+            if (err) {
+              reject(err);
+            } else {
+              db.run(`
+                CREATE TABLE IF NOT EXISTS list_items (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  quantity TEXT NOT NULL DEFAULT '1',
+                  name TEXT DEFAULT '',
+                  position INTEGER NOT NULL,
+                  completed INTEGER DEFAULT 0,
+                  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+              `, (err) => {
+                if (err) {
+                  console.error('Error creating list_items table:', err);
+                  reject(err);
+                } else {
+                  migrateAddMissingColumns().then(() => {
+                    ensureInitialData().then(resolve).catch(reject);
+                  }).catch(reject);
+                }
+              });
+            }
+          });
       });
     });
   });
@@ -320,6 +336,114 @@ function bulkUpdatePositions(positions, callback) {
   });
 }
 
+function getListItems(callback) {
+  db.all('SELECT id, quantity, name, position, completed FROM list_items ORDER BY position ASC', [], (err, rows) => {
+    if (err) callback(err);
+    else callback(null, rows || []);
+  });
+}
+
+function addListItem(item, callback) {
+  const stmt = db.prepare('INSERT INTO list_items (quantity, name, position) SELECT ?, ?, COALESCE(MAX(position), -1) + 1 FROM list_items');
+  stmt.run([item.quantity, item.name || ''], function(err) {
+    if (err) callback(err);
+    else {
+      const lastID = this.lastID;
+      db.get('SELECT id, quantity, name, position, completed FROM list_items WHERE id = ?', [lastID], (err, row) => {
+        if (err) callback(err);
+        else callback(null, row);
+      });
+    }
+  });
+  stmt.finalize();
+}
+
+function updateListItem(id, item, callback) {
+  const updates = [];
+  const values = [];
+  
+  if (item.quantity !== undefined) {
+    updates.push('quantity = ?');
+    values.push(item.quantity);
+  }
+  if (item.name !== undefined) {
+    updates.push('name = ?');
+    values.push(item.name);
+  }
+  if (item.completed !== undefined) {
+    updates.push('completed = ?');
+    values.push(item.completed ? 1 : 0);
+  }
+  
+  if (updates.length === 0) {
+    callback(null, 0);
+    return;
+  }
+  
+  values.push(id);
+  const sql = `UPDATE list_items SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`;
+  db.run(sql, values, function(err) {
+    if (err) callback(err);
+    else callback(null, this.changes);
+  });
+}
+
+function deleteListItem(id, callback) {
+  db.run('DELETE FROM list_items WHERE id = ?', [id], function(err) {
+    if (err) callback(err);
+    else callback(null, this.changes);
+  });
+}
+
+function bulkUpdateListItems(items, callback) {
+  db.run('BEGIN TRANSACTION', (beginErr) => {
+    if (beginErr) {
+      callback(beginErr);
+      return;
+    }
+    
+    const stmt = db.prepare('UPDATE list_items SET quantity = ?, name = ?, position = ?, completed = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?');
+    let error = null;
+    let remaining = items.length;
+    
+    if (remaining === 0) {
+      stmt.finalize((finalizeErr) => {
+        db.run('COMMIT', (commitErr) => {
+          callback(finalizeErr || commitErr || null);
+        });
+      });
+      return;
+    }
+    
+    items.forEach(item => {
+      stmt.run([item.quantity, item.name || '', item.position, item.completed ? 1 : 0, item.id], (runErr) => {
+        if (runErr && !error) {
+          error = runErr;
+        }
+        remaining--;
+        if (remaining === 0) {
+          stmt.finalize((finalizeError) => {
+            const finalError = finalizeError || error;
+            if (finalError) {
+              db.run('ROLLBACK', (rbErr) => {
+                callback(finalError || rbErr);
+              });
+            } else {
+              db.run('COMMIT', (commitErr) => {
+                if (commitErr) {
+                  callback(commitErr);
+                } else {
+                  callback(null);
+                }
+              });
+            }
+          });
+        }
+      });
+    });
+  });
+}
+
 module.exports = {
   initDatabase,
   migrateAddMissingColumns,
@@ -330,5 +454,10 @@ module.exports = {
   updateItem,
   deleteItem,
   bulkUpdateItems,
-  bulkUpdatePositions
+  bulkUpdatePositions,
+  getListItems,
+  addListItem,
+  updateListItem,
+  deleteListItem,
+  bulkUpdateListItems
 };

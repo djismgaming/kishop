@@ -118,6 +118,70 @@ app.delete('/api/items/:id', (req, res) => {
   });
 });
 
+app.get('/api/list-items', (req, res) => {
+  db.getListItems((err, items) => {
+    if (err) {
+      console.error('Error getting list items:', err);
+      res.status(500).json({ error: 'Failed to get list items' });
+    } else {
+      res.json({ items });
+    }
+  });
+});
+
+app.post('/api/list-items', (req, res) => {
+  const item = { quantity: req.body.quantity, name: req.body.name };
+  db.addListItem(item, (err, row) => {
+    if (err) {
+      console.error('Error adding list item:', err);
+      res.status(500).json({ error: 'Failed to add list item' });
+    } else {
+      res.json(row);
+    }
+  });
+});
+
+app.put('/api/list-items', (req, res) => {
+  const items = Array.isArray(req.body.items) ? req.body.items : [];
+  db.bulkUpdateListItems(items, (err) => {
+    if (err) {
+      console.error('Error bulk updating list items:', err);
+      res.status(500).json({ error: 'Failed to update list items' });
+    } else {
+      res.json({ success: true });
+    }
+  });
+});
+
+app.put('/api/list-items/:id', (req, res) => {
+  const id = req.params.id;
+  const item = { 
+    quantity: req.body.quantity, 
+    name: req.body.name,
+    completed: req.body.completed
+  };
+  db.updateListItem(id, item, (err) => {
+    if (err) {
+      console.error('Error updating list item:', err);
+      res.status(500).json({ error: 'Failed to update list item' });
+    } else {
+      res.json({ success: true });
+    }
+  });
+});
+
+app.delete('/api/list-items/:id', (req, res) => {
+  const id = req.params.id;
+  db.deleteListItem(id, (err) => {
+    if (err) {
+      console.error('Error deleting list item:', err);
+      res.status(500).json({ error: 'Failed to delete list item' });
+    } else {
+      res.json({ success: true });
+    }
+  });
+});
+
 db.initDatabase().then(() => {
   app.listen(PORT, () => {
     console.log(`Backend server running on port ${PORT}`);
