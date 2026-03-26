@@ -83,6 +83,51 @@ header.budget-section {
   background: var(--bg-tertiary);
 }
 
+.budget-input-wrapper.loading #max-budget {
+  animation: pulse-border 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-border {
+  0%, 100% { border-color: var(--glass-border); }
+  50% { border-color: var(--text-secondary); }
+}
+
+.budget-input-wrapper.success #max-budget {
+  border-color: var(--accent-teal) !important;
+}
+
+.budget-input-wrapper.warning #max-budget {
+  border-color: var(--warning) !important;
+}
+
+.budget-input-wrapper.danger #max-budget {
+  border-color: var(--danger) !important;
+}
+
+.budget-status-message {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 6px;
+  padding-left: 8px;
+  cursor: pointer;
+}
+
+.budget-status-message:hover {
+  color: var(--accent-blue);
+}
+
+.budget-status-message.success {
+  color: var(--accent-teal);
+}
+
+.budget-status-message.warning {
+  color: var(--warning);
+}
+
+.budget-status-message.danger {
+  color: var(--danger);
+}
+
 main.shopping-list-container {
   padding: 12px;
   position: relative;

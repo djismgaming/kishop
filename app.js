@@ -7,8 +7,12 @@ let appData = {
   listItems: [],
   currentView: 'shopping',
   itemsPendingUpdates: new Map(),
-  listItemsPendingUpdates: new Map()
+  listItemsPendingUpdates: new Map(),
+  budgetLoaded: false,
+  budgetLoadingError: null
 };
+
+let budgetDebounceTimer = null;
 
 async function loadBudget() {
   try {
@@ -16,9 +20,20 @@ async function loadBudget() {
     if (response.ok) {
       const data = await response.json();
       appData.maxBudget = data.maxBudget;
+      appData.budgetLoaded = true;
+      appData.budgetLoadedViaAPI = true;
+      return true;
+    } else {
+      console.error('Failed to load budget: HTTP', response.status);
+      appData.budgetLoadingError = 'Failed to load budget';
+      appData.budgetLoadedViaAPI = false;
+      return false;
     }
   } catch (e) {
     console.error('Error loading budget:', e);
+    appData.budgetLoadingError = 'Network error';
+    appData.budgetLoadedViaAPI = false;
+    return false;
   }
 }
 
@@ -43,22 +58,61 @@ async function loadListItems() {
     }
   } catch (e) {
     console.error('Error loading list items:', e);
+ }
+}
+
+async function loadData(skipBudgetLoad = false) {
+  if (skipBudgetLoad) {
+    await Promise.all([loadItems(), loadListItems()]);
+  } else {
+    await Promise.all([loadBudget(), loadItems(), loadListItems()]);
   }
 }
 
-async function loadData() {
-  await Promise.all([loadBudget(), loadItems(), loadListItems()]);
-}
-
 function saveBudget(value) {
-  appData.maxBudget = value;
-  updateTotalsDisplay();
-  fetch(`${API_BASE}/budget`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ maxBudget: value })
-  }).catch(e => console.error('Error saving budget:', e));
-}
+  const parsed = parseFloat(value);
+  if (value === '' || isNaN(parsed)) {
+    appData.maxBudget = 0;
+    try {
+      localStorage.setItem('kishop_budget_fallback', JSON.stringify({ maxBudget: 0 }));
+    } catch (e) {
+      console.warn('Failed to save budget fallback:', e);
+    }
+  } else {
+    appData.maxBudget = value;
+    try {
+      const savedValue = parseFloat(value);
+      if (!isNaN(savedValue)) {
+        localStorage.setItem('kishop_budget_fallback', JSON.stringify({ maxBudget: savedValue }));
+      }
+    } catch (e) {
+      console.warn('Failed to save budget fallback:', e);
+    }
+  }
+   
+   updateTotalsDisplay();
+   fetch(`${API_BASE}/budget`, {
+     method: 'PUT',
+     headers: { 'Content-Type': 'application/json' },
+     body: JSON.stringify({ maxBudget: value })
+   }).then(response => {
+     if (!response.ok) {
+       response.json().then(data => {
+         console.error('Budget validation failed:', data.error);
+         showInlineStatus(data.error + ' - Click to retry');
+         
+         const budgetWrapper = document.querySelector('.budget-input-wrapper');
+         if (budgetWrapper) {
+           budgetWrapper.classList.add('danger');
+           
+           budgetWrapper.addEventListener('click', () => init(), { once: true });
+         }
+       }).catch(e => console.error('Error parsing budget response:', e));
+     } else {
+       showBudgetStatus('ok', 'Budget saved');
+     }
+   }).catch(e => console.error('Error saving budget:', e));
+ }
 
 function saveItem(index, field, value) {
   appData.items[index][field] = value;
@@ -316,12 +370,14 @@ function createItemElement(item, index) {
     }
   });
 
-  deleteBtn.addEventListener('click', () => {
+  deleteBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (item.saving) return;
-    const item = appData.items[index];
+    const itemToDelete = appData.items[index];
     appData.items.splice(index, 1);
-    if (item.id) {
-      deleteItem(item.id);
+    if (itemToDelete && itemToDelete.id) {
+      deleteItem(itemToDelete.id);
     }
     renderList();
     updateTotalsDisplay();
@@ -591,13 +647,76 @@ async function migrateFromLocalStorage() {
 
 async function init() {
   await migrateFromLocalStorage();
-  await loadData();
+  
+  showBudgetLoadingState(true);
+  
+  const budgetLoaded = await loadBudget();
+  
+  if (budgetLoaded) {
+    appData.budgetLoadingError = null;
+    showBudgetStatus('ok', 'Budget loaded');
+  } else {
+    console.warn('Budget load failed. Checking localStorage fallback...');
+    
+    try {
+      const saved = localStorage.getItem('kishop_budget_fallback');
+      if (saved) {
+        const data = JSON.parse(saved);
+        appData.maxBudget = data.maxBudget;
+        appData.budgetLoadedViaAPI = false;
+        console.log('Restored budget from localStorage:', appData.maxBudget);
+        showBudgetStatus('fallback', 'Using saved budget - backend unavailable');
+      } else {
+        appData.maxBudget = 0;
+        if (appData.budgetLoadingError) {
+          showBudgetStatus('error', appData.budgetLoadingError + ' - Click to retry');
+        } else {
+          showBudgetStatus('error', 'No budget available - Click to retry');
+        }
+      }
+    } catch (e) {
+      console.error('Error loading localStorage fallback:', e);
+      appData.budgetLoadingError = 'Storage error';
+      showBudgetStatus('error', 'Unable to load budget - Click to retry');
+      appData.maxBudget = 0;
+    }
+  }
+
+  await loadData(!appData.budgetLoadedViaAPI);
 
   const maxBudgetInput = document.getElementById('max-budget');
-  maxBudgetInput.value = appData.maxBudget || '';
+  
+  if (appData.maxBudget !== undefined && appData.maxBudget !== null) {
+    const budgetValue = parseFloat(appData.maxBudget);
+    if (!isNaN(budgetValue)) {
+      maxBudgetInput.value = budgetValue.toFixed(2);
+    } else {
+      maxBudgetInput.value = '';
+    }
+  }
 
   maxBudgetInput.addEventListener('input', () => {
-    saveBudget(maxBudgetInput.value);
+    if (budgetDebounceTimer) clearTimeout(budgetDebounceTimer);
+    
+    budgetDebounceTimer = setTimeout(() => {
+      saveBudget(maxBudgetInput.value);
+    }, 300);
+  });
+
+  maxBudgetInput.addEventListener('blur', () => {
+    if (budgetDebounceTimer) {
+      clearTimeout(budgetDebounceTimer);
+      budgetDebounceTimer = null;
+    }
+
+    const value = parseFloat(maxBudgetInput.value);
+    if (isNaN(value) || value < 0) {
+      maxBudgetInput.value = '';
+      appData.maxBudget = 0;
+      updateTotalsDisplay();
+    } else {
+      maxBudgetInput.value = formatCurrency(value).replace('$', '');
+    }
   });
 
   document.addEventListener('click', handleListClick);
@@ -733,6 +852,60 @@ function addItemToList() {
     if (qtyInput) {
       qtyInput.focus();
     }
+  }
+}
+
+function showBudgetLoadingState(loading) {
+  const budgetWrapper = document.querySelector('.budget-input-wrapper');
+  if (budgetWrapper) {
+    if (loading) {
+      budgetWrapper.classList.add('loading');
+      const statusMsg = document.querySelector('.budget-status-message');
+      if (statusMsg && statusMsg.dataset.loading !== 'true') {
+        statusMsg.remove();
+      }
+    } else {
+      budgetWrapper.classList.remove('loading');
+    }
+  }
+}
+
+function showBudgetStatus(status, message) {
+  const budgetWrapper = document.querySelector('.budget-input-wrapper');
+  
+  if (budgetWrapper) {
+    removeStatusMessage();
+    
+    if (status === 'ok') {
+      budgetWrapper.classList.add('success');
+    } else if (status === 'fallback') {
+      budgetWrapper.classList.add('warning');
+      showInlineStatus(message);
+    } else if (status === 'error') {
+      budgetWrapper.classList.add('danger');
+      showInlineStatus(message + ' - Click to retry');
+      
+      budgetWrapper.addEventListener('click', () => init(), { once: true });
+    }
+  }
+}
+
+function removeStatusMessage() {
+  const existing = document.querySelector('.budget-status-message');
+  if (existing) existing.remove();
+}
+
+function showInlineStatus(message) {
+  removeStatusMessage();
+  
+  const statusMsg = document.createElement('div');
+  statusMsg.className = 'budget-status-message';
+  statusMsg.textContent = message;
+  statusMsg.dataset.loading = 'true';
+  
+  const wrapper = document.querySelector('.budget-input-wrapper');
+  if (wrapper) {
+    wrapper.appendChild(statusMsg);
   }
 }
 

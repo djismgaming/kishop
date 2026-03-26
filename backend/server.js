@@ -31,6 +31,15 @@ app.get('/api/budget', (req, res) => {
 
 app.put('/api/budget', (req, res) => {
   const maxBudget = req.body.maxBudget;
+
+  if (maxBudget === undefined || isNaN(maxBudget)) {
+    return res.status(400).json({ error: 'Invalid budget value' });
+  }
+   
+   if (maxBudget < 0) {
+     return res.status(400).json({ error: 'Budget cannot be negative' });
+   }
+  
   db.updateBudget(maxBudget, (err) => {
     if (err) {
       console.error('Error updating budget:', err);

@@ -21,7 +21,7 @@ function initDatabase() {
 
       db.serialize(() => {
         db.run(`
-          CREATE TABLE IF NOT EXISTS shopping_data (
+          CREATE TABLE IF NOT EXISTS budget_data (
             id INTEGER PRIMARY KEY CHECK (id = 1),
             max_budget REAL DEFAULT 0,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -29,7 +29,7 @@ function initDatabase() {
         `);
 
 db.run(`
-            CREATE TABLE IF NOT EXISTS shopping_items (
+            CREATE TABLE IF NOT EXISTS budget_items (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               quantity TEXT NOT NULL DEFAULT '1',
               price TEXT DEFAULT '',
@@ -56,7 +56,11 @@ db.run(`
                   console.error('Error creating list_items table:', err);
                   reject(err);
                 } else {
-                  migrateAddMissingColumns().then(() => {
+                  hasOldTables().then((needsMigration) => {
+                    if (needsMigration) {
+                      console.log('Found old shopping_* tables - migration framework ready');
+                    }
+                  }).then(() => {
                     ensureInitialData().then(resolve).catch(reject);
                   }).catch(reject);
                 }
@@ -69,69 +73,18 @@ db.run(`
 }
 
 /**
- * Migrate shopping_items table to add missing columns (name, completed)
- * @returns {Promise<void>} Promise that resolves when migration is complete
- */
-function migrateAddMissingColumns() {
-  return new Promise((resolve, reject) => {
-    db.serialize(() => {
-      db.all('PRAGMA table_info(shopping_items)', (err, rows) => {
-        if (err) {
-          reject(err);
-          return;
-        }
-        
-        const columns = rows.map(row => row.name);
-        let migrationsNeeded = [];
-        
-        if (!columns.includes('name')) {
-          migrationsNeeded.push('ALTER TABLE shopping_items ADD COLUMN name TEXT DEFAULT \'\'');
-        }
-        if (!columns.includes('completed')) {
-          migrationsNeeded.push('ALTER TABLE shopping_items ADD COLUMN completed INTEGER DEFAULT 0');
-        }
-        
-        if (migrationsNeeded.length === 0) {
-          resolve();
-          return;
-        }
-        
-        let pending = migrationsNeeded.length;
-        let migrationError = null;
-        
-        migrationsNeeded.forEach(migration => {
-          db.run(migration, (err) => {
-            if (err) {
-              migrationError = err;
-            }
-            pending--;
-            if (pending === 0) {
-              if (migrationError) {
-                reject(migrationError);
-              } else {
-                resolve();
-              }
-            }
-          });
-        });
-      });
-    });
-  });
-}
-
-/**
- * Ensure initial data exists in the shopping_data table
+  * Ensure initial data exists in the budget_data table
  * @returns {Promise<void>} Promise that resolves when initial data is ensured
  */
 function ensureInitialData() {
   return new Promise((resolve, reject) => {
-    db.get('SELECT id FROM shopping_data WHERE id = 1', (err, row) => {
+    db.get('SELECT id FROM budget_data WHERE id = 1', (err, row) => {
       if (err) {
         reject(err);
         return;
       }
       if (!row) {
-        db.run('INSERT INTO shopping_data (id, max_budget) VALUES (1, 0)', (err) => {
+        db.run('INSERT INTO budget_data (id, max_budget) VALUES (1, 0)', (err) => {
           if (err) reject(err);
           else resolve();
         });
@@ -148,7 +101,7 @@ function ensureInitialData() {
  * @returns {void}
  */
 function getBudget(callback) {
-  db.get('SELECT max_budget FROM shopping_data WHERE id = 1', (err, row) => {
+  db.get('SELECT max_budget FROM budget_data WHERE id = 1', (err, row) => {
     if (err) callback(err);
     else callback(null, row ? row.max_budget : 0);
   });
@@ -161,32 +114,32 @@ function getBudget(callback) {
  * @returns {void}
  */
 function updateBudget(maxBudget, callback) {
-  db.run('UPDATE shopping_data SET max_budget = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1', [maxBudget], function(err) {
+  db.run('UPDATE budget_data SET max_budget = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1', [maxBudget], function(err) {
     if (err) callback(err);
     else callback(null, this.lastID);
   });
 }
 
 /**
- * Retrieve all shopping items from the database
+ * Retrieve all budget items from the database
  * @param {Function} callback - Callback function with error and items array parameters
  * @returns {void}
  */
 function getItems(callback) {
-  db.all('SELECT id, quantity, price, name, position, completed FROM shopping_items ORDER BY position ASC', (err, rows) => {
+  db.all('SELECT id, quantity, price, name, position, completed FROM budget_items ORDER BY position ASC', (err, rows) => {
     if (err) callback(err);
     else callback(null, rows || []);
   });
 }
 
 /**
- * Add a new shopping item to the database
+ * Add a new budget item to the database
  * @param {Object} item - Item object with quantity, price and name properties
  * @param {Function} callback - Callback function with error and lastID parameters
  * @returns {void}
  */
 function addItem(item, callback) {
-  const stmt = db.prepare('INSERT INTO shopping_items (quantity, price, position, name) SELECT ?, ?, COALESCE(MAX(position), -1) + 1, ? FROM shopping_items');
+  const stmt = db.prepare('INSERT INTO budget_items (quantity, price, position, name) SELECT ?, ?, COALESCE(MAX(position), -1) + 1, ? FROM budget_items');
   stmt.run([item.quantity, item.price, item.name || ''], function(err) {
     if (err) callback(err);
     else callback(null, this.lastID);
@@ -195,7 +148,7 @@ function addItem(item, callback) {
 }
 
 /**
- * Update an existing shopping item in the database
+ * Update an existing budget item in the database
  * @param {number} id - The ID of the item to update
  * @param {Object} item - Object with optional quantity, price, name, completed properties
  * @param {Function} callback - Callback function with error and changes count parameters
@@ -228,34 +181,34 @@ function updateItem(id, item, callback) {
   }
   
   values.push(id);
-  db.run(`UPDATE shopping_items SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, values, function(err) {
+  db.run(`UPDATE budget_items SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, values, function(err) {
     if (err) callback(err);
     else callback(null, this.changes);
   });
 }
 
 /**
- * Delete a shopping item from the database by ID
+ * Delete a budget item from the database by ID
  * @param {number} id - The ID of the item to delete
  * @param {Function} callback - Callback function with error parameter
  * @returns {void}
  */
 function deleteItem(id, callback) {
-  db.run('DELETE FROM shopping_items WHERE id = ?', [id], function(err) {
+  db.run('DELETE FROM budget_items WHERE id = ?', [id], function(err) {
     if (err) callback(err);
     else callback(null, this.changes);
   });
 }
 
 /**
- * Bulk update all shopping items by replacing existing items with new ones
+ * Bulk update all budget items by replacing existing items with new ones
  * @param {Array} items - Array of item objects with quantity, price, name, position, completed properties
  * @param {Function} callback - Callback function with error parameter
  * @returns {void}
  */
 function bulkUpdateItems(items, callback) {
   db.serialize(() => {
-    db.run('DELETE FROM shopping_items', (err) => {
+    db.run('DELETE FROM budget_items', (err) => {
       if (err) {
         callback(err);
         return;
@@ -266,7 +219,7 @@ function bulkUpdateItems(items, callback) {
         return;
       }
 
-      const stmt = db.prepare('INSERT INTO shopping_items (quantity, price, position, name, completed) VALUES (?, ?, ?, ?, ?)');
+      const stmt = db.prepare('INSERT INTO budget_items (quantity, price, position, name, completed) VALUES (?, ?, ?, ?, ?)');
       items.forEach((item, index) => {
         stmt.run([item.quantity, item.price, index, item.name || '', item.completed ? 1 : 0], (err) => {
           if (err && !stmt.err) {
@@ -286,7 +239,7 @@ function bulkUpdateItems(items, callback) {
 }
 
 /**
- * Bulk update positions for shopping items
+ * Bulk update positions for budget items
  * @param {Array} positions - Array of objects with id and position properties
  * @param {Function} callback - Callback function with error parameter
  * @returns {void}
@@ -299,7 +252,7 @@ function bulkUpdatePositions(positions, callback) {
     }
     
     db.serialize(() => {
-      const stmt = db.prepare('UPDATE shopping_items SET position = ? WHERE id = ?');
+      const stmt = db.prepare('UPDATE budget_items SET position = ? WHERE id = ?');
       let error = null;
       let remaining = positions.length;
       
@@ -444,9 +397,21 @@ function bulkUpdateListItems(items, callback) {
   });
 }
 
+function hasOldTables() {
+  return new Promise((resolve) => {
+    db.run('SELECT name FROM sqlite_master WHERE type="table" AND name LIKE "shopping_%"', [], (err, rows) => {
+      if (err || !rows || rows.length === 0) {
+        resolve(false);
+      } else {
+        resolve(true);
+      }
+    });
+  });
+}
+
 module.exports = {
   initDatabase,
-  migrateAddMissingColumns,
+  hasOldTables,
   getBudget,
   updateBudget,
   getItems,
