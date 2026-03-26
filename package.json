@@ -1,0 +1,14 @@
+{
+  "name": "kishop",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "jsdom": "^24.1.3",
+    "vitest": "^1.6.0"
+  }
+}
