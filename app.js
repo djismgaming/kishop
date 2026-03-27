@@ -427,7 +427,6 @@ function createListItemElement(item, index) {
   div.className = `list-item-card fade-in ${item.completed ? 'list-item-card--completed' : ''}`;
   div.dataset.index = index;
   div.dataset.id = item.id;
-  div.draggable = !item.completed;
 
   const name = item.name || 'Item name';
   const quantity = parseInt(item.quantity) || 1;
@@ -508,9 +507,6 @@ function createListItemElement(item, index) {
     renderCompletedItems();
   });
 
-  div.addEventListener('dragstart', handleDragStart);
-  div.addEventListener('dragend', handleDragEnd);
-
   return div;
 }
 
@@ -582,85 +578,6 @@ function addItemToList() {
   renderActiveItems();
   renderCompletedItems();
   saveNewListItem(item);
-}
-
-// ==========================================================================
-// Drag and Drop
-// ==========================================================================
-
-let dragItem = null;
-let dragIndex = null;
-
-function handleDragStart(e) {
-  const item = e.target.closest('.list-item-card');
-  if (!item || item.classList.contains('list-item-card--completed') || item.classList.contains('dragging')) return;
-
-  dragItem = item;
-  dragIndex = parseInt(item.dataset.index);
-  item.classList.add('dragging');
-  e.dataTransfer.effect = 'move';
-  e.dataTransfer.setData('text/plain', dragIndex);
-}
-
-function handleDragOver(e) {
-  e.preventDefault();
-  const item = e.target.closest('.list-item-card');
-  if (!item || item.classList.contains('list-item-card--completed') || item === dragItem) return;
-
-  const targetIndex = parseInt(item.dataset.index);
-  const container = document.getElementById('active-items-list');
-
-  if (targetIndex < dragIndex) {
-    container.insertBefore(dragItem, item);
-  } else {
-    const nextItem = item.nextElementSibling;
-    if (nextItem && nextItem.classList.contains('list-item-card')) {
-      container.insertBefore(dragItem, nextItem);
-    } else {
-      container.appendChild(dragItem);
-    }
-  }
-
-  dragIndex = Array.from(container.querySelectorAll('.list-item-card:not(.list-item-card--completed)')).indexOf(dragItem);
-}
-
-function handleDragEnd(e) {
-  if (dragItem) {
-    dragItem.classList.remove('dragging');
-  }
-  dragItem = null;
-  dragIndex = null;
-  
-  // Update positions on server
-  updateListPositions();
-}
-
-function updateListPositions() {
-  const container = document.getElementById('active-items-list');
-  const currentItems = Array.from(container.querySelectorAll('.list-item-card:not(.list-item-card--completed)'));
-
-  const positions = currentItems.map((item, index) => ({
-    id: parseInt(item.dataset.id, 10),
-    position: index
-  }));
-
-  if (positions.length > 0) {
-    fetch(`${API_BASE}/list-items`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items: positions })
-    }).then(async response => {
-      if (response.ok) {
-        positions.forEach(pos => {
-          const item = appData.listItems.find(it => it.id === pos.id);
-          if (item) {
-            item.position = pos.position;
-          }
-        });
-        appData.listItems.sort((a, b) => a.position - b.position);
-      }
-    }).catch(e => console.error('Error updating list positions:', e));
-  }
 }
 
 // ==========================================================================
