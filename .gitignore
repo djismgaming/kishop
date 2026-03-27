@@ -17,3 +17,4 @@ coverage/
 .cache
 nul
 stitch
+.qwen
