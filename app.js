@@ -93,7 +93,16 @@ function saveBudget(value) {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ maxBudget: value })
-  }).catch(e => console.error('Error saving budget:', e));
+  })
+    .then(async response => {
+      if (!response.ok) {
+        const errorText = response.headers.get('content-type')?.includes('application/json')
+          ? (await response.json()).error || response.statusText
+          : await response.text();
+        console.error(`Error saving budget (${response.status}):`, errorText);
+      }
+    })
+    .catch(e => console.error('Error saving budget:', e));
 }
 
 function saveItem(index, field, value) {
