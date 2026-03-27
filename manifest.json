@@ -1,11 +1,11 @@
 {
-  "name": "KiShop",
+  "name": "KiShop - The Fluid Ledger",
   "short_name": "KiShop",
   "description": "Simple shopping list with budget tracking",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#4a90e2",
+  "background_color": "#f5fbef",
+  "theme_color": "#006e1c",
   "orientation": "portrait",
   "icons": [
     {

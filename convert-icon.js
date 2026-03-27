@@ -1,4 +1,4 @@
-const sharp = require('sharp');
+import sharp from 'sharp';
 
 const sizes = [
   { size: 180, name: 'apple-touch-icon.png' },

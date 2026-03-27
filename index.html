@@ -1,108 +1,163 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#4a90e2">
-  <title>KiShop - Shopping List</title>
+  <meta name="theme-color" content="#006e1c">
+  <title>KiShop - The Fluid Ledger</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+
   <link rel="stylesheet" href="styles.css">
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon-180x180.png">
-  <link rel="apple-touch-icon" sizes="152x152" href="apple-touch-icon-152x152.png">
-  <link rel="apple-touch-icon" sizes="144x144" href="apple-touch-icon-144x144.png">
-  <link rel="apple-touch-icon" sizes="120x120" href="apple-touch-icon-120x120.png">
-  <link rel="apple-touch-icon" sizes="76x76" href="apple-touch-icon-76x76.png">
-  <link rel="apple-touch-icon" sizes="60x60" href="apple-touch-icon-60x60.png">
-  <link rel="apple-touch-icon" sizes="57x57" href="apple-touch-icon-57x57.png">
-  <link rel="apple-touch-icon" sizes="72x72" href="apple-touch-icon-72x72.png">
-  <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <meta name="apple-mobile-web-app-title" content="KiShop">
 </head>
 <body>
   <div class="app-container">
-    <header class="budget-section">
-      <label for="max-budget">Max Subtotal:</label>
-      <div class="budget-input-wrapper">
-        <span class="currency-symbol">$</span>
-        <input 
-          type="number" 
-          id="max-budget" 
-          inputmode="decimal" 
-          placeholder="0.00" 
-          step="0.01"
-          min="0"
-        >
+    <!-- Top App Bar -->
+    <header class="top-app-bar">
+      <div class="top-app-bar__title">
+        <span class="material-symbols-outlined top-app-bar__icon">account_balance_wallet</span>
+        <span>The Fluid Ledger</span>
       </div>
-      <div class="toggle-nav">
-        <button id="toggle-shopping" class="nav-btn active">Budget</button>
-        <button id="toggle-list" class="nav-btn">Shopping List</button>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark/light theme" style="background: none; border: none; cursor: pointer; padding: 8px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: background 0.2s; color: var(--on-surface);">
+          <span class="material-symbols-outlined" id="theme-icon">dark_mode</span>
+        </button>
+        <div class="top-app-bar__avatar">
+          <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuBWSMgHQuLxnFcx3b9LF1e6RoujWSzXPpgxqdIOfg_Yzj-xGXjwzA3DL3Td3pyOUJa-A_bns9O39LmmXOYz8B7XJYyuhuihOogEfAFmdOhm0nCPcSt3i2LRGeBpVbfBdD-q2WOHRRftdyFvUFEwcRGoPUSXhNZUb99J0MdFWV2ZKiOnzMVRXIwD4X-1kXlsmAO6uJdnrQH7WavbCDEEK4uWNwRZCw7fF3FiPuPCnOQhjurzi-CC-50WgLj6k54dL7ahKu6NHp83_A" alt="User profile">
+        </div>
       </div>
     </header>
 
-    <main class="shopping-list-container">
-      <!-- Shopping View (existing) -->
-      <section id="shopping-view">
-        <div class="list-header">
-          <div class="col-qty">Qty</div>
-          <div class="col-price">Price</div>
-          <div class="col-action"></div>
-        </div>
-        <div id="shopping-list" class="shopping-list"></div>
+    <!-- Main Content -->
+    <main class="main-content" style="padding-top: 80px;">
+      
+      <!-- Budget Tracker View -->
+      <section id="budget-tracker-view">
+        <!-- Budget Hero Section -->
+        <section class="budget-hero mb-6">
+          <div class="budget-hero__content">
+            <div class="budget-hero__header">
+              <div>
+                <span class="budget-hero__label">Spent So Far</span>
+                <div class="budget-hero__value">
+                  <span style="font-size: 0.5em; vertical-align: super;">$</span>
+                  <span id="hero-spent">142.80</span>
+                </div>
+              </div>
+              <div>
+                <span class="budget-hero__sublabel">Total Budget</span>
+                <div class="budget-hero__budget-input-wrapper">
+                  <span class="budget-hero__currency">$</span>
+                  <input type="number" id="hero-budget-input" class="budget-hero__budget-input" value="200.00" step="0.01" min="0" placeholder="0.00">
+                </div>
+              </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="budget-progress">
+              <div class="budget-progress__fill" id="budget-progress-fill" style="width: 71.4%;"></div>
+            </div>
+
+            <div class="budget-hero__footer">
+              <div class="budget-hero__status" id="budget-status">
+                <span class="material-symbols-outlined" style="font-size: 14px;">check_circle</span>
+                <span class="budget-hero__status-label">Healthy Status</span>
+              </div>
+              <span class="budget-hero__percentage" id="budget-percentage">28.6% REMAINING</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Rapid Entry Section -->
+        <section class="rapid-entry">
+          <div class="rapid-entry__field">
+            <label class="rapid-entry__label" for="rapid-price">Price ($)</label>
+            <input type="number" id="rapid-price" class="rapid-entry__input" placeholder="0.00" step="0.01" inputmode="decimal">
+          </div>
+          <div class="rapid-entry__field">
+            <label class="rapid-entry__label" for="rapid-quantity">Quantity</label>
+            <input type="number" id="rapid-quantity" class="rapid-entry__input" placeholder="1" step="1" inputmode="numeric">
+          </div>
+          <button class="rapid-entry__submit" id="rapid-add-btn">
+            <span class="material-symbols-outlined material-symbols-outlined--filled">add_circle</span>
+            Add Item to List
+          </button>
+        </section>
+
+        <!-- Recent Items Section -->
+        <section class="shopping-list-section">
+          <div class="shopping-list__section-header">
+            <h2 class="shopping-list__section-title">Recent Items</h2>
+            <button class="label-sm" style="background: none; border: none; color: var(--primary); cursor: pointer;" id="clear-recent-btn">Clear All</button>
+          </div>
+          <div id="recent-items-list" class="shopping-list">
+            <!-- Items will be rendered here -->
+          </div>
+        </section>
       </section>
 
-      <!-- Shopping List View (new) -->
-      <section id="list-view" class="hidden">
-        <div class="list-header">
-          <div class="col-check"></div>
-          <div class="col-qty">Qty</div>
-          <div class="col-name">Item</div>
-          <div class="col-action"></div>
-          <div class="col-drag"></div>
-        </div>
-        <div id="active-items-container">
-          <div id="active-items" class="shopping-list"></div>
-          <button id="add-item-btn" class="add-item-btn">+ Add Item</button>
-        </div>
-        
-        <div id="completed-section" class="hidden">
-          <h3 class="completed-header">Complete</h3>
-          <div id="completed-items" class="shopping-list completed-list"></div>
-        </div>
+      <!-- Shopping List View -->
+      <section id="shopping-list-view" class="hidden">
+        <!-- Filter Chips -->
+        <section class="filter-chips mb-6">
+          <button class="filter-chip filter-chip--active" data-sort="recent">Recently Added</button>
+          <button class="filter-chip" data-sort="az">A-Z</button>
+          <button class="filter-chip" data-sort="quantity">By Quantity</button>
+        </section>
+
+        <!-- Essential Supplies List -->
+        <section class="shopping-list-section">
+          <div class="shopping-list__section-header">
+            <h2 class="shopping-list__section-title">Essential Supplies</h2>
+            <span class="shopping-list__section-count" id="active-count">0 ITEMS</span>
+          </div>
+          <div id="active-items-list" class="shopping-list">
+            <!-- Active items will be rendered here -->
+          </div>
+        </section>
+
+        <!-- Completed Section -->
+        <section id="completed-section" class="shopping-list-section mt-4 hidden">
+          <div class="shopping-list__section-header">
+            <h2 class="shopping-list__section-title">Completed</h2>
+            <span class="shopping-list__section-count" id="completed-count">0 ITEMS</span>
+          </div>
+          <div id="completed-items-list" class="shopping-list"></div>
+        </section>
       </section>
+
     </main>
 
-    <footer class="totals-panel">
-      <div class="totals-grid">
-        <div class="total-item">
-          <div class="total-label">Items</div>
-          <div class="total-value" id="total-qty">0</div>
-        </div>
-        <div class="total-item">
-          <div class="total-label">Subtotal</div>
-          <div class="total-value" id="subtotal">$0.00</div>
-        </div>
-        <div class="total-item">
-          <div class="total-label">Total (Tax 11.5%)</div>
-          <div class="total-value" id="grand-total">$0.00</div>
-        </div>
-      </div>
-      <div class="buttons-row">
-        <button id="clear-all" class="clear-btn">Clear All</button>
-        <button id="refresh-btn" class="refresh-btn" aria-label="Refresh data">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
-            <path d="M3 3v5h5"></path>
-            <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path>
-            <path d="M16 21h5v-5"></path>
-          </svg>
-          Refresh
-        </button>
-      </div>
-    </footer>
+    <!-- Floating Quick Add Bar (Shopping List View) -->
+    <div class="quick-add-bar hidden" id="quick-add-bar">
+      <input type="text" class="quick-add-bar__input" id="quick-add-input" placeholder="Add new item...">
+      <button class="quick-add-bar__button" id="quick-add-submit">
+        <span class="material-symbols-outlined">add</span>
+      </button>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+      <a href="#" class="bottom-nav__item bottom-nav__item--active" data-view="budget-tracker">
+        <span class="material-symbols-outlined bottom-nav__icon" data-icon="analytics">analytics</span>
+        <span class="bottom-nav__label">Budget Tracker</span>
+      </a>
+      <a href="#" class="bottom-nav__item" data-view="shopping-list">
+        <span class="material-symbols-outlined bottom-nav__icon" data-icon="shopping_bag">shopping_bag</span>
+        <span class="bottom-nav__label">Shopping List</span>
+      </a>
+    </nav>
   </div>
 
   <script src="app.js"></script>

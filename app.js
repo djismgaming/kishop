@@ -1,11 +1,17 @@
+/* ==========================================================================
+   THE FLUID LEDGER - Application JavaScript
+   ========================================================================== */
+
 const TAX_RATE = 0.115;
 const API_BASE = '/api';
 
+// Application State
 let appData = {
   maxBudget: 0,
   items: [],
   listItems: [],
-  currentView: 'shopping',
+  currentView: 'budget-tracker',
+  currentSort: 'recent',
   itemsPendingUpdates: new Map(),
   listItemsPendingUpdates: new Map(),
   budgetLoaded: false,
@@ -13,6 +19,10 @@ let appData = {
 };
 
 let budgetDebounceTimer = null;
+
+// ==========================================================================
+// API Functions
+// ==========================================================================
 
 async function loadBudget() {
   try {
@@ -58,7 +68,7 @@ async function loadListItems() {
     }
   } catch (e) {
     console.error('Error loading list items:', e);
- }
+  }
 }
 
 async function loadData(skipBudgetLoad = false) {
@@ -73,50 +83,23 @@ function saveBudget(value) {
   const parsed = parseFloat(value);
   if (value === '' || isNaN(parsed)) {
     appData.maxBudget = 0;
-    try {
-      localStorage.setItem('kishop_budget_fallback', JSON.stringify({ maxBudget: 0 }));
-    } catch (e) {
-      console.warn('Failed to save budget fallback:', e);
-    }
   } else {
     appData.maxBudget = value;
-    try {
-      const savedValue = parseFloat(value);
-      if (!isNaN(savedValue)) {
-        localStorage.setItem('kishop_budget_fallback', JSON.stringify({ maxBudget: savedValue }));
-      }
-    } catch (e) {
-      console.warn('Failed to save budget fallback:', e);
-    }
   }
-   
-   updateTotalsDisplay();
-   fetch(`${API_BASE}/budget`, {
-     method: 'PUT',
-     headers: { 'Content-Type': 'application/json' },
-     body: JSON.stringify({ maxBudget: value })
-   }).then(response => {
-     if (!response.ok) {
-       response.json().then(data => {
-         console.error('Budget validation failed:', data.error);
-         showInlineStatus(data.error + ' - Click to retry');
-         
-         const budgetWrapper = document.querySelector('.budget-input-wrapper');
-         if (budgetWrapper) {
-           budgetWrapper.classList.add('danger');
-           
-           budgetWrapper.addEventListener('click', () => init(), { once: true });
-         }
-       }).catch(e => console.error('Error parsing budget response:', e));
-     } else {
-       showBudgetStatus('ok', 'Budget saved');
-     }
-   }).catch(e => console.error('Error saving budget:', e));
- }
+
+  updateBudgetHero();
+
+  fetch(`${API_BASE}/budget`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ maxBudget: value })
+  }).catch(e => console.error('Error saving budget:', e));
+}
 
 function saveItem(index, field, value) {
   appData.items[index][field] = value;
-  updateTotalsDisplay();
+  updateBudgetHero();
+  
   const item = appData.items[index];
   if (item.id) {
     fetch(`${API_BASE}/items/${item.id}`, {
@@ -124,48 +107,7 @@ function saveItem(index, field, value) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(item)
     }).catch(e => console.error('Error saving item:', e));
-  } else {
-    if (!appData.itemsPendingUpdates.has(item)) {
-      appData.itemsPendingUpdates.set(item, {});
-    }
-    appData.itemsPendingUpdates.get(item)[field] = value;
   }
-}
-
-function saveNewItem(item) {
-  const itemKey = item;
-  itemKey.saving = true;
-  renderList();
-  
-  fetch(`${API_BASE}/items`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(item)
-  }).then(async response => {
-    if (response.ok) {
-      const data = await response.json();
-      itemKey.id = data.id;
-      itemKey.saving = false;
-      renderList();
-      
-      const pending = appData.itemsPendingUpdates.get(itemKey);
-      if (pending) {
-        Object.entries(pending).forEach(([field, value]) => {
-          itemKey[field] = value;
-        });
-        fetch(`${API_BASE}/items/${itemKey.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(itemKey)
-        }).catch(e => console.error('Error saving item:', e));
-        appData.itemsPendingUpdates.delete(itemKey);
-      }
-    }
-  }).catch(e => {
-    itemKey.saving = false;
-    renderList();
-    console.error('Error adding item:', e);
-  });
 }
 
 function deleteItem(id) {
@@ -177,7 +119,8 @@ function deleteItem(id) {
 function saveNewListItem(item) {
   const itemKey = item;
   itemKey.saving = true;
-  
+  renderActiveItems();
+
   fetch(`${API_BASE}/list-items`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -187,27 +130,12 @@ function saveNewListItem(item) {
       const data = await response.json();
       itemKey.id = data.id;
       itemKey.saving = false;
-      
       renderActiveItems();
       renderCompletedItems();
-      
-      const pending = appData.listItemsPendingUpdates.get(itemKey);
-      if (pending) {
-        Object.entries(pending).forEach(([field, value]) => {
-          itemKey[field] = value;
-        });
-        fetch(`${API_BASE}/list-items/${itemKey.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(itemKey)
-        }).catch(e => console.error('Error saving list item:', e));
-        appData.listItemsPendingUpdates.delete(itemKey);
-      }
     }
   }).catch(e => {
     itemKey.saving = false;
     renderActiveItems();
-    renderCompletedItems();
     console.error('Error adding list item:', e);
   });
 }
@@ -221,11 +149,6 @@ function saveListItem(index, field, value) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(item)
     }).catch(e => console.error('Error saving list item:', e));
-  } else {
-    if (!appData.listItemsPendingUpdates.has(item)) {
-      appData.listItemsPendingUpdates.set(item, {});
-    }
-    appData.listItemsPendingUpdates.get(item)[field] = value;
   }
 }
 
@@ -238,13 +161,13 @@ function deleteListItem(id) {
 function toggleListItemComplete(id) {
   const index = appData.listItems.findIndex(item => item.id === id);
   if (index === -1) return;
-  
+
   const item = appData.listItems[index];
   item.completed = !item.completed;
-  
+
   renderActiveItems();
   renderCompletedItems();
-  
+
   if (item.id) {
     fetch(`${API_BASE}/list-items/${item.id}`, {
       method: 'PUT',
@@ -253,6 +176,10 @@ function toggleListItemComplete(id) {
     }).catch(e => console.error('Error updating complete:', e));
   }
 }
+
+// ==========================================================================
+// Utility Functions
+// ==========================================================================
 
 function formatCurrency(amount) {
   return '$' + amount.toFixed(2);
@@ -277,203 +204,299 @@ function calculateTotals() {
   return { totalQty, subtotal, tax, grandTotal };
 }
 
-function updateTotalsDisplay() {
-  const totals = calculateTotals();
-  const maxBudget = parseFloat(appData.maxBudget) || 0;
+function getItemImpact(price) {
+  const numericPrice = parseFloat(price) || 0;
+  if (numericPrice >= 30) return 'high';
+  if (numericPrice >= 10) return 'medium';
+  return 'low';
+}
 
-  document.getElementById('total-qty').textContent = totals.totalQty;
-  document.getElementById('subtotal').textContent = formatCurrency(totals.subtotal);
-  document.getElementById('grand-total').textContent = formatCurrency(totals.grandTotal);
-
-  const footer = document.querySelector('footer.totals-panel');
-  footer.classList.remove('warning', 'danger', 'success');
-
-  if (maxBudget > 0) {
-    const percentage = (totals.subtotal / maxBudget) * 100;
-    if (percentage >= 100) {
-      footer.classList.add('danger');
-    } else if (percentage >= 75) {
-      footer.classList.add('warning');
-    } else {
-      footer.classList.add('success');
-    }
-  } else {
-    footer.classList.add('success');
+function getItemImpactClass(impact) {
+  switch (impact) {
+    case 'high': return 'list-item-card__indicator--high';
+    case 'medium': return 'list-item-card__indicator--medium';
+    case 'low': return 'list-item-card__indicator--low';
+    default: return 'list-item-card__indicator--low';
   }
 }
 
-function createItemElement(item, index) {
+function getPriceColorClass(impact) {
+  switch (impact) {
+    case 'high': return 'list-item-card__price--high';
+    case 'medium': return 'list-item-card__price--medium';
+    case 'low': return 'list-item-card__price--low';
+    default: return 'list-item-card__price--low';
+  }
+}
+
+function getBudgetStatusClass(percentage) {
+  if (percentage >= 100) return 'danger';
+  if (percentage >= 75) return 'warning';
+  return 'success';
+}
+
+function getBudgetProgressClass(percentage) {
+  if (percentage >= 100) return 'budget-progress__fill--danger';
+  if (percentage >= 75) return 'budget-progress__fill--warning';
+  return '';
+}
+
+// ==========================================================================
+// Render Functions - Budget Tracker
+// ==========================================================================
+
+function updateBudgetHero() {
+  const totals = calculateTotals();
+  const maxBudget = parseFloat(appData.maxBudget) || 0;
+
+  // Update spent amount
+  const heroSpentEl = document.getElementById('hero-spent');
+  if (heroSpentEl) {
+    heroSpentEl.textContent = totals.subtotal.toFixed(2);
+  }
+
+  // Update budget input field
+  const heroBudgetInput = document.getElementById('hero-budget-input');
+  if (heroBudgetInput && !document.activeElement.contains(heroBudgetInput)) {
+    // Only update if not currently focused (to avoid disrupting user typing)
+    heroBudgetInput.value = maxBudget > 0 ? maxBudget.toFixed(2) : '';
+  }
+
+  // Calculate percentage
+  let percentage = 0;
+  if (maxBudget > 0) {
+    percentage = (totals.subtotal / maxBudget) * 100;
+  }
+
+  // Update progress bar
+  const progressFill = document.getElementById('budget-progress-fill');
+  if (progressFill) {
+    progressFill.style.width = Math.min(percentage, 100) + '%';
+
+    // Remove old status classes
+    progressFill.classList.remove('budget-progress__fill--warning', 'budget-progress__fill--danger');
+
+    // Add new status class
+    const progressClass = getBudgetProgressClass(percentage);
+    if (progressClass) {
+      progressFill.classList.add(progressClass);
+    }
+  }
+
+  // Update status badge
+  const statusEl = document.getElementById('budget-status');
+  const percentageEl = document.getElementById('budget-percentage');
+
+  if (statusEl) {
+    if (percentage >= 100) {
+      statusEl.innerHTML = '<span class="material-symbols-outlined" style="font-size: 14px;">error</span><span class="budget-hero__status-label">Over Budget</span>';
+      statusEl.style.background = 'var(--tertiary-fixed)';
+      const label = statusEl.querySelector('.budget-hero__status-label');
+      if (label) label.style.color = 'var(--on-tertiary-fixed-variant)';
+    } else if (percentage >= 75) {
+      statusEl.innerHTML = '<span class="material-symbols-outlined" style="font-size: 14px;">warning</span><span class="budget-hero__status-label">Warning</span>';
+      statusEl.style.background = 'var(--secondary-fixed)';
+      const label = statusEl.querySelector('.budget-hero__status-label');
+      if (label) label.style.color = 'var(--on-secondary-fixed-variant)';
+    } else {
+      statusEl.innerHTML = '<span class="material-symbols-outlined" style="font-size: 14px;">check_circle</span><span class="budget-hero__status-label">Healthy Status</span>';
+      statusEl.style.background = 'var(--primary-fixed)';
+      const label = statusEl.querySelector('.budget-hero__status-label');
+      if (label) label.style.color = 'var(--on-primary-fixed-variant)';
+    }
+  }
+
+  if (percentageEl) {
+    percentageEl.textContent = (100 - Math.min(percentage, 100)).toFixed(1) + '% REMAINING';
+  }
+}
+
+function createRecentItemElement(item, index) {
+  const impact = getItemImpact(item.price);
+
   const div = document.createElement('div');
-  div.className = `list-item ${item.saving ? 'saving' : ''}`;
+  div.className = 'list-item-card fade-in';
   div.dataset.index = index;
 
+  const price = parseFloat(item.price) || 0;
+  const quantity = parseInt(item.quantity) || 1;
+  const subtotal = price * quantity;
+
   div.innerHTML = `
-    <div class="col-qty">
-      <input 
-        type="number" 
-        inputmode="decimal" 
-        class="quantity-input" 
-        value="${item.quantity || ''}" 
-        placeholder="0"
-        min="0"
-        step="1"
-      >
+    <div class="list-item-card__indicator ${getItemImpactClass(impact)}"></div>
+    <div class="list-item-card__content">
+      <div class="list-item-card__header">
+        <span class="list-item-card__name">Item #${String(index + 1).padStart(2, '0')}</span>
+      </div>
+      <div class="list-item-card__price-row">
+        <div class="list-item-card__qty-controls">
+          <button class="list-item-card__qty-btn" data-action="decrease" aria-label="Decrease quantity">
+            <span class="material-symbols-outlined">remove</span>
+          </button>
+          <span class="list-item-card__qty-value">${quantity}</span>
+          <button class="list-item-card__qty-btn" data-action="increase" aria-label="Increase quantity">
+            <span class="material-symbols-outlined">add</span>
+          </button>
+        </div>
+        <span class="list-item-card__price-label">Price:</span>
+        <input type="number" class="list-item-card__price-input ${getPriceColorClass(impact)}" value="${price.toFixed(2)}" step="0.01" min="0"/>
+        <span class="list-item-card__separator">|</span>
+        <span class="list-item-card__subtotal-label">Subtotal:</span>
+        <span class="list-item-card__price ${getPriceColorClass(impact)}">${formatCurrency(subtotal)}</span>
+      </div>
     </div>
-    <div class="col-price">
-      <input 
-        type="number" 
-        inputmode="decimal" 
-        class="price-input" 
-        value="${item.price || ''}" 
-        placeholder="0.00"
-        min="0"
-        step="0.01"
-      >
-    </div>
-    <div class="col-action">
-      <button class="delete-btn" aria-label="Delete item" ${item.saving ? 'disabled' : ''}>
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="3 6 5 6 21 6"></polyline>
-          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-          <line x1="10" y1="1" x2="10" y2="2"></line>
-          <line x1="14" y1="1" x2="14" y2="2"></line>
-        </svg>
-      </button>
-    </div>
+    <button class="list-item-card__delete" aria-label="Delete item">
+      <span class="material-symbols-outlined">delete</span>
+    </button>
   `;
 
-  const qtyInput = div.querySelector('.quantity-input');
-  const priceInput = div.querySelector('.price-input');
-  const deleteBtn = div.querySelector('.delete-btn');
-
-  qtyInput.addEventListener('input', () => {
-    saveItem(index, 'quantity', qtyInput.value);
+  const priceInput = div.querySelector('.list-item-card__price-input');
+  priceInput.addEventListener('change', (e) => {
+    const newPrice = parseFloat(e.target.value) || 0;
+    item.price = newPrice.toFixed(2);
+    saveItem(index, 'price', item.price);
+    renderRecentItems();
+    updateBudgetHero();
   });
 
-  priceInput.addEventListener('input', () => {
-    saveItem(index, 'price', priceInput.value);
+  // Quantity buttons
+  const qtyButtons = div.querySelectorAll('.list-item-card__qty-btn');
+  qtyButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const action = btn.dataset.action;
+      let newQty = quantity;
+
+      if (action === 'increase') {
+        newQty = quantity + 1;
+      } else if (action === 'decrease' && quantity > 1) {
+        newQty = quantity - 1;
+      }
+
+      item.quantity = newQty.toString();
+      saveItem(index, 'quantity', item.quantity);
+      renderRecentItems();
+      updateBudgetHero();
+    });
   });
 
-  priceInput.addEventListener('blur', () => {
-    renderList();
-  });
-
-  qtyInput.addEventListener('focus', (e) => {
-    if (e.relatedTarget !== null) {
-      qtyInput.select();
-    }
-  });
-
-  priceInput.addEventListener('focus', (e) => {
-    if (e.relatedTarget !== null) {
-      priceInput.select();
-    }
-  });
-
-  deleteBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (item.saving) return;
-    const itemToDelete = appData.items[index];
+  const deleteBtn = div.querySelector('.list-item-card__delete');
+  deleteBtn.addEventListener('click', () => {
+    const itemId = item.id;
     appData.items.splice(index, 1);
-    if (itemToDelete && itemToDelete.id) {
-      deleteItem(itemToDelete.id);
+    if (itemId) {
+      deleteItem(itemId);
     }
-    renderList();
-    updateTotalsDisplay();
+    renderRecentItems();
+    updateBudgetHero();
   });
 
   return div;
 }
 
-function renderList() {
-  const listContainer = document.getElementById('shopping-list');
-  listContainer.innerHTML = '';
-
+function renderRecentItems() {
+  const container = document.getElementById('recent-items-list');
+  
   if (appData.items.length === 0) {
-    listContainer.innerHTML = `
-      <div class="empty-state">
-        <div style="font-size: 32px;">🛒</div>
-        <p>Start adding items to your shopping list</p>
-        <button id="add-item-btn" style="margin-top: 16px; padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 14px; cursor: pointer;">Add Item</button>
+    container.innerHTML = `
+      <div class="empty-state" style="text-align: center; padding: 40px 20px; color: var(--on-surface-variant);">
+        <div style="font-size: 48px; margin-bottom: 16px;">🛒</div>
+        <p class="body-md">Start adding items to your shopping list</p>
       </div>
     `;
     return;
   }
-
-  appData.items.forEach((item, index) => {
-    const itemElement = createItemElement(item, index);
-    listContainer.appendChild(itemElement);
+  
+  container.innerHTML = '';
+  
+  // Show last 5 items
+  const recentItems = appData.items.slice(-5).reverse();
+  recentItems.forEach((item, index) => {
+    const originalIndex = appData.items.length - 1 - index;
+    const itemElement = createRecentItemElement(item, originalIndex);
+    container.appendChild(itemElement);
   });
 }
 
-function toggleView(view) {
-  appData.currentView = view;
-  
-  const shoppingView = document.getElementById('shopping-view');
-  const listView = document.getElementById('list-view');
-  const toggleShopping = document.getElementById('toggle-shopping');
-  const toggleList = document.getElementById('toggle-list');
-  
-  if (view === 'shopping') {
-    shoppingView.classList.remove('hidden');
-    listView.classList.add('hidden');
-    toggleShopping.classList.add('active');
-    toggleList.classList.remove('active');
-  } else {
-    shoppingView.classList.add('hidden');
-    listView.classList.remove('hidden');
-    toggleShopping.classList.remove('active');
-    toggleList.classList.add('active');
-    
-    renderActiveItems();
-    renderCompletedItems();
-  }
-}
+// ==========================================================================
+// Render Functions - Shopping List
+// ==========================================================================
 
 function createListItemElement(item, index) {
+  const impact = getItemImpact(item.price);
   const div = document.createElement('div');
-  div.className = `list-item ${item.completed ? 'completed' : ''} ${item.saving ? 'saving' : ''}`;
+  div.className = `list-item-card fade-in ${item.completed ? 'list-item-card--completed' : ''}`;
   div.dataset.index = index;
   div.dataset.id = item.id;
-  div.draggable = true;
-  
+  div.draggable = !item.completed;
+
+  const name = item.name || 'Item name';
+  const quantity = parseInt(item.quantity) || 1;
+
   div.innerHTML = `
+    <div class="list-item-card__indicator ${getItemImpactClass(impact)}"></div>
     <div class="col-check">
-      <button class="check-btn" aria-label="Toggle complete" ${item.saving ? 'disabled' : ''}>✓</button>
+      <input type="checkbox" class="list-item-card__checkbox" aria-label="Toggle complete" ${item.completed ? 'checked' : ''}>
     </div>
-    <div class="col-qty">
-      <input type="number" value="${item.quantity || ''}" placeholder="0" min="0" step="1">
+    <div class="list-item-card__content">
+      <div class="list-item-card__header">
+        <input type="text" class="list-item-card__name-input" value="${name}" placeholder="Item name"/>
+      </div>
+      <input type="text" class="list-item-card__description-input" value="${item.description || ''}" placeholder="Add description..."/>
     </div>
-    <div class="col-name">
-      <input type="text" value="${item.name || ''}" placeholder="Item name">
+    <div class="list-item-card__qty-controls">
+      <button class="list-item-card__qty-btn" data-action="decrease" aria-label="Decrease quantity">
+        <span class="material-symbols-outlined">remove</span>
+      </button>
+      <span class="list-item-card__qty-value">${quantity}</span>
+      <button class="list-item-card__qty-btn" data-action="increase" aria-label="Increase quantity">
+        <span class="material-symbols-outlined">add</span>
+      </button>
     </div>
-    <div class="col-action">
-      <button class="delete-btn" aria-label="Delete item" ${item.saving ? 'disabled' : ''}>&times;</button>
-    </div>
-    <div class="col-drag">
-      <span class="drag-handle" aria-label="Drag to reorder">☰</span>
-    </div>
+    <button class="list-item-card__delete" aria-label="Delete item" ${item.completed ? 'disabled' : ''}>
+      <span class="material-symbols-outlined">delete</span>
+    </button>
   `;
-  
-  const checkBtn = div.querySelector('.check-btn');
-  const qtyInput = div.querySelector('.col-qty input');
-  const nameInput = div.querySelector('.col-name input');
-  const deleteBtn = div.querySelector('.delete-btn');
-  
-  checkBtn.addEventListener('click', () => {
+
+  const checkbox = div.querySelector('.list-item-card__checkbox');
+  checkbox.addEventListener('change', () => {
     if (item.saving) return;
     toggleListItemComplete(item.id);
   });
-  
-  qtyInput.addEventListener('input', () => {
-    saveListItem(index, 'quantity', qtyInput.value);
+
+  const nameInput = div.querySelector('.list-item-card__name-input');
+  nameInput.addEventListener('change', (e) => {
+    item.name = e.target.value;
+    saveListItem(index, 'name', item.name);
   });
-  
-  nameInput.addEventListener('input', () => {
-    saveListItem(index, 'name', nameInput.value);
+
+  const descriptionInput = div.querySelector('.list-item-card__description-input');
+  descriptionInput.addEventListener('change', (e) => {
+    item.description = e.target.value;
+    saveListItem(index, 'description', item.description);
   });
-  
+
+  // Quantity buttons
+  const qtyButtons = div.querySelectorAll('.list-item-card__qty-btn');
+  qtyButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (item.saving) return;
+      const action = btn.dataset.action;
+      let newQty = quantity;
+      
+      if (action === 'increase') {
+        newQty = quantity + 1;
+      } else if (action === 'decrease' && quantity > 1) {
+        newQty = quantity - 1;
+      }
+      
+      item.quantity = newQty.toString();
+      saveListItem(index, 'quantity', item.quantity);
+      renderActiveItems();
+      renderCompletedItems();
+    });
+  });
+
+  const deleteBtn = div.querySelector('.list-item-card__delete');
   deleteBtn.addEventListener('click', () => {
     if (item.saving) return;
     const itemId = item.id;
@@ -484,21 +507,94 @@ function createListItemElement(item, index) {
     renderActiveItems();
     renderCompletedItems();
   });
-  
+
   div.addEventListener('dragstart', handleDragStart);
   div.addEventListener('dragend', handleDragEnd);
-  
+
   return div;
 }
 
+function renderActiveItems() {
+  const container = document.getElementById('active-items-list');
+  const active = appData.listItems.filter(item => !item.completed);
+  
+  // Update count
+  document.getElementById('active-count').textContent = active.length + ' ITEMS';
+  
+  if (active.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state" style="text-align: center; padding: 40px 20px; color: var(--on-surface-variant);">
+        <div style="font-size: 48px; margin-bottom: 16px;">📝</div>
+        <p class="body-md">No active items</p>
+        <p class="body-sm" style="margin-top: 8px;">Add items to your shopping list</p>
+      </div>
+    `;
+    return;
+  }
+  
+  container.innerHTML = '';
+  active.forEach((item, index) => {
+    const originalIndex = appData.listItems.findIndex(it => it.id === item.id);
+    const el = createListItemElement(item, originalIndex);
+    container.appendChild(el);
+  });
+}
+
+function renderCompletedItems() {
+  const container = document.getElementById('completed-items-list');
+  const completed = appData.listItems.filter(item => item.completed);
+  
+  const section = document.getElementById('completed-section');
+  document.getElementById('completed-count').textContent = completed.length + ' ITEMS';
+  
+  if (completed.length === 0) {
+    section.classList.add('hidden');
+    return;
+  }
+  
+  section.classList.remove('hidden');
+  container.innerHTML = '';
+  completed.forEach((item, index) => {
+    const originalIndex = appData.listItems.findIndex(it => it.id === item.id);
+    const el = createListItemElement(item, originalIndex);
+    container.appendChild(el);
+  });
+}
+
+function toggleItemComplete(id) {
+  const item = appData.items.find(i => i.id == id);
+  if (!item) return;
+
+  item.completed = !item.completed;
+
+  renderRecentItems();
+
+  fetch(`${API_BASE}/items/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ completed: item.completed })
+  }).catch(e => console.error('Error updating complete:', e));
+}
+
+function addItemToList() {
+  const item = { quantity: '1', name: '', description: '', completed: false, price: '' };
+  appData.listItems.push(item);
+  renderActiveItems();
+  renderCompletedItems();
+  saveNewListItem(item);
+}
+
+// ==========================================================================
+// Drag and Drop
+// ==========================================================================
+
 let dragItem = null;
 let dragIndex = null;
-let positionsToUpdate = [];
 
 function handleDragStart(e) {
-  const item = e.target.closest('.list-item');
-  if (!item || item.classList.contains('completed') || item.classList.contains('dragging')) return;
-  
+  const item = e.target.closest('.list-item-card');
+  if (!item || item.classList.contains('list-item-card--completed') || item.classList.contains('dragging')) return;
+
   dragItem = item;
   dragIndex = parseInt(item.dataset.index);
   item.classList.add('dragging');
@@ -508,114 +604,316 @@ function handleDragStart(e) {
 
 function handleDragOver(e) {
   e.preventDefault();
-  const item = e.target.closest('.list-item');
-  if (!item || item.classList.contains('completed') || item === dragItem) return;
-  
+  const item = e.target.closest('.list-item-card');
+  if (!item || item.classList.contains('list-item-card--completed') || item === dragItem) return;
+
   const targetIndex = parseInt(item.dataset.index);
-  const container = document.getElementById('active-items');
-  
+  const container = document.getElementById('active-items-list');
+
   if (targetIndex < dragIndex) {
     container.insertBefore(dragItem, item);
   } else {
     const nextItem = item.nextElementSibling;
-    if (nextItem && nextItem.classList.contains('list-item')) {
+    if (nextItem && nextItem.classList.contains('list-item-card')) {
       container.insertBefore(dragItem, nextItem);
     } else {
       container.appendChild(dragItem);
     }
   }
-  
-  dragIndex = Array.from(container.querySelectorAll('.list-item:not(.completed)')).indexOf(dragItem);
+
+  dragIndex = Array.from(container.querySelectorAll('.list-item-card:not(.list-item-card--completed)')).indexOf(dragItem);
 }
 
 function handleDragEnd(e) {
-  dragItem.classList.remove('dragging');
+  if (dragItem) {
+    dragItem.classList.remove('dragging');
+  }
   dragItem = null;
   dragIndex = null;
-  handleListDragEnd(e);
-}
-
-function addEmptyRow() {
-  const item = { quantity: '1', price: '' };
-  appData.items.push(item);
-  renderList();
-  updateTotalsDisplay();
-  saveNewItem(item);
-
-  const listContainer = document.getElementById('shopping-list');
-  const lastItem = listContainer.lastElementChild;
-  if (lastItem) {
-    const qtyInput = lastItem.querySelector('.quantity-input');
-    if (qtyInput) {
-      qtyInput.focus();
-    }
-  }
-}
-
-function ensureEmptyRow() {
-  const lastItem = appData.items[appData.items.length - 1];
-  if (!lastItem || (lastItem.quantity && lastItem.price)) {
-    addEmptyRow();
-  }
-}
-
-function handleListClick(e) {
-  const target = e.target;
-  const listContainer = document.getElementById('shopping-list');
-
-  if (target.classList.contains('quantity-input') || target.classList.contains('price-input')) {
-    const itemElement = target.closest('.list-item');
-    const index = parseInt(itemElement.dataset.index);
-    
-    target.addEventListener('blur', () => {
-      setTimeout(ensureEmptyRow, 100);
-    });
-  }
-}
-
-function handleKeyPress(e) {
-  if (e.key === 'Enter') {
-    const activeElement = document.activeElement;
-    if (activeElement.classList.contains('quantity-input') || activeElement.classList.contains('price-input')) {
-      const itemElement = activeElement.closest('.list-item');
-      const qtyInput = itemElement.querySelector('.quantity-input');
-      const priceInput = itemElement.querySelector('.price-input');
-
-      if (activeElement === qtyInput) {
-        priceInput.focus();
-      } else {
-        ensureEmptyRow();
-      }
-    }
-  }
-}
-
-function clearAll() {
-  if (confirm('Are you sure you want to clear all items?')) {
-    const itemIds = appData.items.filter(item => item.id).map(item => item.id);
-    appData.items = [];
-    itemIds.forEach(id => deleteItem(id));
-    renderList();
-    updateTotalsDisplay();
-    addEmptyRow();
-  }
-}
-
-async function refreshData() {
-  const refreshBtn = document.getElementById('refresh-btn');
-  refreshBtn.classList.add('pulsing');
   
-  await loadData();
-  renderList();
+  // Update positions on server
+  updateListPositions();
+}
+
+function updateListPositions() {
+  const container = document.getElementById('active-items-list');
+  const currentItems = Array.from(container.querySelectorAll('.list-item-card:not(.list-item-card--completed)'));
+
+  const positions = currentItems.map((item, index) => ({
+    id: parseInt(item.dataset.id, 10),
+    position: index
+  }));
+
+  if (positions.length > 0) {
+    fetch(`${API_BASE}/list-items`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: positions })
+    }).then(async response => {
+      if (response.ok) {
+        positions.forEach(pos => {
+          const item = appData.listItems.find(it => it.id === pos.id);
+          if (item) {
+            item.position = pos.position;
+          }
+        });
+        appData.listItems.sort((a, b) => a.position - b.position);
+      }
+    }).catch(e => console.error('Error updating list positions:', e));
+  }
+}
+
+// ==========================================================================
+// View Management
+// ==========================================================================
+
+function switchView(viewName) {
+  appData.currentView = viewName;
+
+  const budgetView = document.getElementById('budget-tracker-view');
+  const listView = document.getElementById('shopping-list-view');
+  const quickAddBar = document.getElementById('quick-add-bar');
+
+  const navItems = document.querySelectorAll('.bottom-nav__item');
+
+  if (viewName === 'budget-tracker') {
+    budgetView.classList.remove('hidden');
+    listView.classList.add('hidden');
+    quickAddBar.classList.add('hidden');
+
+    navItems.forEach(item => {
+      item.classList.toggle('bottom-nav__item--active', item.dataset.view === 'budget-tracker');
+    });
+
+    renderRecentItems();
+  } else if (viewName === 'shopping-list') {
+    budgetView.classList.add('hidden');
+    listView.classList.remove('hidden');
+    quickAddBar.classList.remove('hidden');
+
+    navItems.forEach(item => {
+      item.classList.toggle('bottom-nav__item--active', item.dataset.view === 'shopping-list');
+    });
+
+    renderActiveItems();
+    renderCompletedItems();
+  }
+}
+
+// ==========================================================================
+// Filter Chips
+// ==========================================================================
+
+function setupFilterChips() {
+  const chips = document.querySelectorAll('.filter-chip');
+  
+  chips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      // Remove active class from all chips
+      chips.forEach(c => c.classList.remove('filter-chip--active'));
+      // Add active class to clicked chip
+      chip.classList.add('filter-chip--active');
+      
+      // Set current sort
+      appData.currentSort = chip.dataset.sort;
+      
+      // Sort and render items
+      sortAndRenderItems(appData.currentSort);
+    });
+  });
+}
+
+function sortAndRenderItems(sortType) {
+  switch (sortType) {
+    case 'recent':
+      // Keep original order (most recent first)
+      appData.listItems.sort((a, b) => b.position - a.position);
+      break;
+    case 'az':
+      // Sort alphabetically by name
+      appData.listItems.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      break;
+    case 'quantity':
+      // Sort by quantity (highest first)
+      appData.listItems.sort((a, b) => (parseInt(b.quantity) || 0) - (parseInt(a.quantity) || 0));
+      break;
+  }
+
   renderActiveItems();
   renderCompletedItems();
-  updateTotalsDisplay();
-  ensureEmptyRow();
-  
-  setTimeout(() => {
-    refreshBtn.classList.remove('pulsing');
-  }, 1000);
 }
+
+// ==========================================================================
+// Event Handlers
+// ==========================================================================
+
+function setupEventListeners() {
+  // Theme Toggle
+  document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+
+  // Budget Input in Hero Section
+  const heroBudgetInput = document.getElementById('hero-budget-input');
+  if (heroBudgetInput) {
+    heroBudgetInput.addEventListener('blur', () => {
+      const value = heroBudgetInput.value.trim();
+      if (value === '' || parseFloat(value) < 0) {
+        appData.maxBudget = 0;
+        heroBudgetInput.value = '';
+      } else {
+        appData.maxBudget = parseFloat(value);
+        heroBudgetInput.value = parseFloat(value).toFixed(2);
+      }
+      saveBudget(appData.maxBudget);
+    });
+
+    heroBudgetInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        heroBudgetInput.blur();
+      }
+    });
+  }
+
+  // Bottom Navigation
+  const navItems = document.querySelectorAll('.bottom-nav__item');
+  navItems.forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.preventDefault();
+      switchView(item.dataset.view);
+    });
+  });
+
+  // Rapid Entry (Budget Tracker)
+  const rapidPrice = document.getElementById('rapid-price');
+  const rapidQuantity = document.getElementById('rapid-quantity');
+  const rapidAddBtn = document.getElementById('rapid-add-btn');
+
+  if (rapidPrice && rapidQuantity && rapidAddBtn) {
+    rapidPrice.addEventListener('input', () => {
+      if (budgetDebounceTimer) clearTimeout(budgetDebounceTimer);
+      budgetDebounceTimer = setTimeout(() => {
+        // Could save to API if needed
+      }, 300);
+    });
+
+    // Rapid Add Button
+    rapidAddBtn.addEventListener('click', () => {
+      const price = rapidPrice.value;
+      const quantity = rapidQuantity.value || '1';
+
+      if (price) {
+        const item = { quantity, price, completed: false };
+        appData.items.push(item);
+        renderRecentItems();
+        updateBudgetHero();
+        saveNewItemToItems(item);
+
+        // Clear inputs
+        rapidPrice.value = '';
+        rapidQuantity.value = '1';
+        rapidPrice.focus();
+      }
+    });
+  }
+
+  // Quick Add
+  // Quick Add (Shopping List)
+  const quickAddInput = document.getElementById('quick-add-input');
+  const quickAddSubmit = document.getElementById('quick-add-submit');
+  const clearRecentBtn = document.getElementById('clear-recent-btn');
+
+  if (quickAddInput && quickAddSubmit) {
+    quickAddSubmit.addEventListener('click', () => {
+      const name = quickAddInput.value.trim();
+      if (name) {
+        const item = { name, quantity: '1', description: '', completed: false, price: '' };
+        appData.listItems.push(item);
+        renderActiveItems();
+        saveNewListItem(item);
+        quickAddInput.value = '';
+        quickAddInput.focus();
+      }
+    });
+
+    quickAddInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        quickAddSubmit.click();
+      }
+    });
+  }
+
+  // Clear Recent Button
+  if (clearRecentBtn) {
+    clearRecentBtn.addEventListener('click', () => {
+      if (confirm('Clear all recent items?')) {
+        const itemIds = appData.items.filter(item => item.id).map(item => item.id);
+        appData.items = [];
+        itemIds.forEach(id => deleteItem(id));
+        renderRecentItems();
+        updateBudgetHero();
+      }
+    });
+  }
+
+  // Filter Chips
+  setupFilterChips();
+}
+
+function saveNewItemToItems(item) {
+  const itemKey = item;
+  itemKey.saving = true;
+
+  fetch(`${API_BASE}/items`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(item)
+  }).then(async response => {
+    if (response.ok) {
+      const data = await response.json();
+      itemKey.id = data.id;
+      itemKey.saving = false;
+    }
+  }).catch(e => {
+    itemKey.saving = false;
+    console.error('Error adding item:', e);
+  });
+}
+
+// ==========================================================================
+// Theme Management
+// ==========================================================================
+
+function initTheme() {
+  // Check for saved theme preference or default to light
+  const savedTheme = localStorage.getItem('fluid-ledger-theme') || 'light';
+  setTheme(savedTheme);
+}
+
+function setTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('fluid-ledger-theme', theme);
+  
+  // Update theme icon
+  const themeIcon = document.getElementById('theme-icon');
+  if (themeIcon) {
+    themeIcon.textContent = theme === 'dark' ? 'light_mode' : 'dark_mode';
+  }
+  
+  // Update theme color meta tag
+  const themeColor = document.querySelector('meta[name="theme-color"]');
+  if (themeColor) {
+    themeColor.setAttribute('content', theme === 'dark' ? '#0b160e' : '#006e1c');
+  }
+}
+
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  setTheme(newTheme);
+}
+
+// ==========================================================================
+// Initialization
+// ==========================================================================
 
 async function migrateFromLocalStorage() {
   try {
@@ -646,267 +944,31 @@ async function migrateFromLocalStorage() {
 }
 
 async function init() {
+  // Initialize theme first
+  initTheme();
+
   await migrateFromLocalStorage();
-  
-  showBudgetLoadingState(true);
-  
-  const budgetLoaded = await loadBudget();
-  
-  if (budgetLoaded) {
-    appData.budgetLoadingError = null;
-    showBudgetStatus('ok', 'Budget loaded');
-  } else {
-    console.warn('Budget load failed. Checking localStorage fallback...');
-    
-    try {
-      const saved = localStorage.getItem('kishop_budget_fallback');
-      if (saved) {
-        const data = JSON.parse(saved);
-        appData.maxBudget = data.maxBudget;
-        appData.budgetLoadedViaAPI = false;
-        console.log('Restored budget from localStorage:', appData.maxBudget);
-        showBudgetStatus('fallback', 'Using saved budget - backend unavailable');
-      } else {
-        appData.maxBudget = 0;
-        if (appData.budgetLoadingError) {
-          showBudgetStatus('error', appData.budgetLoadingError + ' - Click to retry');
-        } else {
-          showBudgetStatus('error', 'No budget available - Click to retry');
-        }
-      }
-    } catch (e) {
-      console.error('Error loading localStorage fallback:', e);
-      appData.budgetLoadingError = 'Storage error';
-      showBudgetStatus('error', 'Unable to load budget - Click to retry');
-      appData.maxBudget = 0;
-    }
+  await loadData();
+
+  // Initialize budget input field
+  const heroBudgetInput = document.getElementById('hero-budget-input');
+  if (heroBudgetInput && appData.maxBudget) {
+    heroBudgetInput.value = parseFloat(appData.maxBudget).toFixed(2);
   }
 
-  await loadData(!appData.budgetLoadedViaAPI);
+  // Initialize budget display
+  updateBudgetHero();
 
-  const maxBudgetInput = document.getElementById('max-budget');
-  
-  if (appData.maxBudget !== undefined && appData.maxBudget !== null) {
-    const budgetValue = parseFloat(appData.maxBudget);
-    if (!isNaN(budgetValue)) {
-      maxBudgetInput.value = budgetValue.toFixed(2);
-    } else {
-      maxBudgetInput.value = '';
-    }
-  }
+  // Setup event listeners
+  setupEventListeners();
 
-  maxBudgetInput.addEventListener('input', () => {
-    if (budgetDebounceTimer) clearTimeout(budgetDebounceTimer);
-    
-    budgetDebounceTimer = setTimeout(() => {
-      saveBudget(maxBudgetInput.value);
-    }, 300);
-  });
-
-  maxBudgetInput.addEventListener('blur', () => {
-    if (budgetDebounceTimer) {
-      clearTimeout(budgetDebounceTimer);
-      budgetDebounceTimer = null;
-    }
-
-    const value = parseFloat(maxBudgetInput.value);
-    if (isNaN(value) || value < 0) {
-      maxBudgetInput.value = '';
-      appData.maxBudget = 0;
-      updateTotalsDisplay();
-    } else {
-      maxBudgetInput.value = formatCurrency(value).replace('$', '');
-    }
-  });
-
-  document.addEventListener('click', handleListClick);
-  document.addEventListener('keydown', handleKeyPress);
-
-  document.getElementById('clear-all').addEventListener('click', clearAll);
-  document.getElementById('refresh-btn').addEventListener('click', refreshData);
-
-  renderList();
+  // Initial renders
+  renderRecentItems();
   renderActiveItems();
   renderCompletedItems();
-  updateTotalsDisplay();
-  ensureEmptyRow();
-  
-  const activeContainer = document.getElementById('active-items');
-  if (activeContainer) {
-    activeContainer.addEventListener('dragover', handleDragOver);
-    activeContainer.addEventListener('dragenter', (e) => e.preventDefault());
-  }
-  
-  document.getElementById('toggle-shopping').addEventListener('click', () => toggleView('shopping'));
-  document.getElementById('toggle-list').addEventListener('click', () => toggleView('list'));
-  document.getElementById('add-item-btn').addEventListener('click', () => {
-    if (appData.currentView === 'list') {
-      addItemToList();
-    } else {
-      addEmptyRow();
-    }
-  });
+
+  console.log('The Fluid Ledger initialized');
 }
 
-let listPositionsToUpdate = [];
-
-function handleListDragEnd(e) {
-  const container = document.getElementById('active-items');
-  const currentItems = Array.from(container.querySelectorAll('.list-item:not(.completed)'));
-  
-  listPositionsToUpdate = currentItems.map((item, index) => ({
-    id: parseInt(item.dataset.id, 10),
-    position: index
-  }));
-  
-  if (listPositionsToUpdate.length > 0) {
-    fetch(`${API_BASE}/list-items`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items: listPositionsToUpdate.map((p, i) => ({
-        ...p,
-        id: p.id,
-        quantity: currentItems[i].querySelector('.col-qty input')?.value || '1',
-        name: currentItems[i].querySelector('.col-name input')?.value || '',
-        completed: false
-      })) })
-    }).then(async response => {
-      if (response.ok) {
-        appData.listItems.forEach(item => {
-          const pos = listPositionsToUpdate.find(p => p.id === item.id);
-          if (pos) {
-            item.position = pos.position;
-          }
-        });
-        appData.listItems.sort((a, b) => a.position - b.position);
-      }
-    }).catch(e => console.error('Error updating list positions:', e));
-  }
-}
-
-function renderActiveItems() {
-  const container = document.getElementById('active-items');
-  const active = appData.listItems.filter(item => !item.completed);
-  
-  if (active.length === 0) {
-    container.innerHTML = '<div class="empty-state">No active items</div>';
-    return;
-  }
-  
-  container.innerHTML = '';
-  active.forEach((item, index) => {
-    const originalIndex = appData.listItems.findIndex(it => it.id === item.id);
-    const el = createListItemElement(item, originalIndex);
-    container.appendChild(el);
-  });
-}
-
-function renderCompletedItems() {
-  const container = document.getElementById('completed-items');
-  const completed = appData.listItems.filter(item => item.completed);
-  
-  const section = document.getElementById('completed-section');
-  
-  if (completed.length === 0) {
-    section.classList.add('hidden');
-    return;
-  }
-  
-  section.classList.remove('hidden');
-  container.innerHTML = '';
-  completed.forEach((item, index) => {
-    const originalIndex = appData.listItems.findIndex(it => it.id === item.id);
-    const el = createListItemElement(item, originalIndex);
-    el.classList.add('completed');
-    container.appendChild(el);
-  });
-}
-
-function toggleItemComplete(id) {
-  const item = appData.items.find(i => i.id == id);
-  if (!item) return;
-  
-  item.completed = !item.completed;
-  
-  renderActiveItems();
-  renderCompletedItems();
-  
-  fetch(`${API_BASE}/items/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ completed: item.completed })
-  }).catch(e => console.error('Error updating complete:', e));
-}
-
-function addItemToList() {
-  const item = { quantity: '1', name: '', completed: false };
-  appData.listItems.push(item);
-  renderActiveItems();
-  renderCompletedItems();
-  saveNewListItem(item);
-  
-  const container = document.getElementById('active-items');
-  const lastItem = container.lastElementChild;
-  if (lastItem) {
-    const qtyInput = lastItem.querySelector('.col-qty input');
-    if (qtyInput) {
-      qtyInput.focus();
-    }
-  }
-}
-
-function showBudgetLoadingState(loading) {
-  const budgetWrapper = document.querySelector('.budget-input-wrapper');
-  if (budgetWrapper) {
-    if (loading) {
-      budgetWrapper.classList.add('loading');
-      const statusMsg = document.querySelector('.budget-status-message');
-      if (statusMsg && statusMsg.dataset.loading !== 'true') {
-        statusMsg.remove();
-      }
-    } else {
-      budgetWrapper.classList.remove('loading');
-    }
-  }
-}
-
-function showBudgetStatus(status, message) {
-  const budgetWrapper = document.querySelector('.budget-input-wrapper');
-  
-  if (budgetWrapper) {
-    removeStatusMessage();
-    
-    if (status === 'ok') {
-      budgetWrapper.classList.add('success');
-    } else if (status === 'fallback') {
-      budgetWrapper.classList.add('warning');
-      showInlineStatus(message);
-    } else if (status === 'error') {
-      budgetWrapper.classList.add('danger');
-      showInlineStatus(message + ' - Click to retry');
-      
-      budgetWrapper.addEventListener('click', () => init(), { once: true });
-    }
-  }
-}
-
-function removeStatusMessage() {
-  const existing = document.querySelector('.budget-status-message');
-  if (existing) existing.remove();
-}
-
-function showInlineStatus(message) {
-  removeStatusMessage();
-  
-  const statusMsg = document.createElement('div');
-  statusMsg.className = 'budget-status-message';
-  statusMsg.textContent = message;
-  statusMsg.dataset.loading = 'true';
-  
-  const wrapper = document.querySelector('.budget-input-wrapper');
-  if (wrapper) {
-    wrapper.appendChild(statusMsg);
-  }
-}
-
+// Start the app
 document.addEventListener('DOMContentLoaded', init);

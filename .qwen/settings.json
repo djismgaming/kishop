@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm start)",
+      "Bash(node *)",
+      "Bash(docker compose down)",
+      "Bash(docker compose up *)",
+      "Bash(curl *)",
+      "Bash(npm run *)",
+      "Bash(sed *)"
+    ]
+  }
+}
