@@ -108,14 +108,23 @@ function saveBudget(value) {
 function saveItem(index, field, value) {
   appData.items[index][field] = value;
   updateBudgetHero();
-  
+
   const item = appData.items[index];
   if (item.id) {
     fetch(`${API_BASE}/items/${item.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(item)
-    }).catch(e => console.error('Error saving item:', e));
+    })
+      .then(async response => {
+        if (!response.ok) {
+          const errorText = response.headers.get('content-type')?.includes('application/json')
+            ? (await response.json()).error || response.statusText
+            : await response.text();
+          console.error(`Error saving item (${response.status}):`, errorText);
+        }
+      })
+      .catch(e => console.error('Error saving item:', e));
   }
 }
 
