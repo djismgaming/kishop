@@ -275,7 +275,7 @@ function updateBudgetHero() {
 
   // Update budget input field
   const heroBudgetInput = document.getElementById('hero-budget-input');
-  if (heroBudgetInput && !document.activeElement.contains(heroBudgetInput)) {
+  if (heroBudgetInput && document.activeElement !== heroBudgetInput) {
     // Only update if not currently focused (to avoid disrupting user typing)
     heroBudgetInput.value = maxBudget > 0 ? maxBudget.toFixed(2) : '';
   }
