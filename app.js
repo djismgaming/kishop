@@ -5,6 +5,18 @@
 const TAX_RATE = 0.115;
 const API_BASE = '/api';
 
+/**
+ * Sanitize string for safe HTML output by escaping special characters
+ * @param {string} str - User input to sanitize
+ * @returns {string} - Sanitized string safe for use in HTML attributes
+ */
+function escapeHTML(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
 // Application State
 let appData = {
   maxBudget: 0,
@@ -456,9 +468,9 @@ function createListItemElement(item, index) {
     </div>
     <div class="list-item-card__content">
       <div class="list-item-card__header">
-        <input type="text" class="list-item-card__name-input" value="${name}" placeholder="Item name"/>
+        <input type="text" class="list-item-card__name-input" value="${escapeHTML(name)}" placeholder="Item name"/>
       </div>
-      <input type="text" class="list-item-card__description-input" value="${item.description || ''}" placeholder="Add description..."/>
+      <input type="text" class="list-item-card__description-input" value="${escapeHTML(item.description || '')}" placeholder="Add description..."/>
     </div>
     <div class="list-item-card__qty-controls">
       <button class="list-item-card__qty-btn" data-action="decrease" aria-label="Decrease quantity">
