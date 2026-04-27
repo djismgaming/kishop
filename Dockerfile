@@ -1,13 +1,13 @@
-FROM node:20-alpine3.23 AS backend-builder
+FROM node:22.22.2-alpine3.23 AS backend-builder
 
 WORKDIR /app
 
 COPY backend/package*.json ./
-RUN npm install --omit=dev
+RUN npm ci --omit=dev
 
 COPY backend/*.js ./
 
-FROM node:20-alpine3.23
+FROM node:22.22.2-alpine3.23
 
 WORKDIR /app
 
