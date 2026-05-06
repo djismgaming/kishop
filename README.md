@@ -1,6 +1,6 @@
-# KiShop - Mobile Shopping List
+# KiShop — Mobile Shopping Lists & Budget Tracker
 
-A mobile-first web app for managing shopping lists and calculating totals with tax.
+A mobile-first web app for managing shopping lists with tax-aware totals and tracking spending against a configurable budget.
 
 ## Features
 
