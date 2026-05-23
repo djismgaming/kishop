@@ -7,6 +7,63 @@ const PORT = process.env.PORT || 3001;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Input validation and sanitization utilities
+function validateInput(input) {
+  if (typeof input !== 'string') return null;
+  
+  // Trim whitespace
+  input = input.trim();
+  
+  // Check length limits
+  if (input.length === 0 || input.length > 255) {
+    return null;
+  }
+  
+  // Check for potentially dangerous characters (basic check)
+  const dangerousPatterns = [
+    /<script/i,
+    /javascript:/i,
+    /on\w+\s*=/i,
+    /data:\s*text\/html/i
+  ];
+  
+  for (const pattern of dangerousPatterns) {
+    if (pattern.test(input)) {
+      return null;
+    }
+  }
+  
+  return input;
+}
+
+function sanitizeName(name) {
+  if (typeof name !== 'string') return '';
+  return name.trim().substring(0, 100); // Max 100 chars for name
+}
+
+function sanitizeDescription(description) {
+  if (typeof description !== 'string') return '';
+  return description.trim().substring(0, 500); // Max 500 chars for description
+}
+
+function validateQuantity(quantity) {
+  if (quantity === undefined || quantity === null) return 1;
+  const num = Number(quantity);
+  if (isNaN(num) || num < 1 || num > 9999) {
+    return 1;
+  }
+  return Math.round(num);
+}
+
+function validatePrice(price) {
+  if (price === undefined || price === null) return 0;
+  const num = Number(price);
+  if (isNaN(num) || num < 0 || num > 999999.99) {
+    return 0;
+  }
+  return Math.round(num * 100) / 100; // Round to 2 decimals
+}
+
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -35,10 +92,10 @@ app.put('/api/budget', (req, res) => {
   if (maxBudget === undefined || isNaN(maxBudget)) {
     return res.status(400).json({ error: 'Invalid budget value' });
   }
-   
-   if (maxBudget < 0) {
-     return res.status(400).json({ error: 'Budget cannot be negative' });
-   }
+  
+  if (maxBudget < 0) {
+    return res.status(400).json({ error: 'Budget cannot be negative' });
+  }
   
   db.updateBudget(maxBudget, (err) => {
     if (err) {
@@ -62,7 +119,12 @@ app.get('/api/items', (req, res) => {
 });
 
 app.post('/api/items', (req, res) => {
-  const item = { quantity: req.body.quantity, price: req.body.price, name: req.body.name };
+  // Validate and sanitize input
+  const name = sanitizeName(req.body.name || '');
+  const quantity = validateQuantity(req.body.quantity);
+  const price = validatePrice(req.body.price);
+  
+  const item = { quantity, price, name };
   db.addItem(item, (err, id) => {
     if (err) {
       console.error('Error adding item:', err);
@@ -74,8 +136,17 @@ app.post('/api/items', (req, res) => {
 });
 
 app.put('/api/items', (req, res) => {
-  const items = req.body.items;
-  db.bulkUpdateItems(items, (err) => {
+  const items = req.body.items || [];
+  
+  const validatedItems = items.map(item => ({
+    id: item.id,
+    name: sanitizeName(item.name || ''),
+    quantity: validateQuantity(item.quantity),
+    price: validatePrice(item.price),
+    completed: item.completed !== undefined ? item.completed : false
+  }));
+  
+  db.bulkUpdateItems(validatedItems, (err) => {
     if (err) {
       console.error('Error bulk updating items:', err);
       res.status(500).json({ error: 'Failed to update items' });
@@ -99,11 +170,18 @@ app.put('/api/items/position', (req, res) => {
 
 app.put('/api/items/:id', (req, res) => {
   const id = req.params.id;
+  
+  // Validate and sanitize input
+  const name = sanitizeName(req.body.name || '');
+  const quantity = validateQuantity(req.body.quantity);
+  const price = validatePrice(req.body.price);
+  const completed = req.body.completed !== undefined ? req.body.completed : false;
+  
   const item = { 
-    quantity: req.body.quantity, 
-    price: req.body.price,
-    name: req.body.name,
-    completed: req.body.completed
+    quantity, 
+    price,
+    name,
+    completed
   };
   db.updateItem(id, item, (err) => {
     if (err) {
@@ -139,7 +217,11 @@ app.get('/api/list-items', (req, res) => {
 });
 
 app.post('/api/list-items', (req, res) => {
-  const item = { quantity: req.body.quantity, name: req.body.name };
+  // Validate and sanitize input
+  const name = sanitizeName(req.body.name || '');
+  const quantity = validateQuantity(req.body.quantity);
+  
+  const item = { quantity, name };
   db.addListItem(item, (err, row) => {
     if (err) {
       console.error('Error adding list item:', err);
@@ -152,7 +234,15 @@ app.post('/api/list-items', (req, res) => {
 
 app.put('/api/list-items', (req, res) => {
   const items = Array.isArray(req.body.items) ? req.body.items : [];
-  db.bulkUpdateListItems(items, (err) => {
+  
+  const validatedItems = items.map(item => ({
+    id: item.id,
+    name: sanitizeName(item.name || ''),
+    quantity: validateQuantity(item.quantity),
+    completed: item.completed !== undefined ? item.completed : false
+  }));
+  
+  db.bulkUpdateListItems(validatedItems, (err) => {
     if (err) {
       console.error('Error bulk updating list items:', err);
       res.status(500).json({ error: 'Failed to update list items' });
@@ -164,10 +254,16 @@ app.put('/api/list-items', (req, res) => {
 
 app.put('/api/list-items/:id', (req, res) => {
   const id = req.params.id;
+  
+  // Validate and sanitize input
+  const name = sanitizeName(req.body.name || '');
+  const quantity = validateQuantity(req.body.quantity);
+  const completed = req.body.completed !== undefined ? req.body.completed : false;
+  
   const item = { 
-    quantity: req.body.quantity, 
-    name: req.body.name,
-    completed: req.body.completed
+    quantity, 
+    name,
+    completed
   };
   db.updateListItem(id, item, (err) => {
     if (err) {
