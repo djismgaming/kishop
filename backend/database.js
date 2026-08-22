@@ -201,6 +201,18 @@ function deleteItem(id, callback) {
 }
 
 /**
+ * Clear all budget items from the database
+ * @param {Function} callback - Callback function with error and deleted count parameters
+ * @returns {void}
+ */
+function clearItems(callback) {
+  db.run('DELETE FROM budget_items', [], function(err) {
+    if (err) callback(err);
+    else callback(null, this.changes);
+  });
+}
+
+/**
  * Bulk update all budget items by replacing existing items with new ones
  * @param {Array} items - Array of item objects with quantity, price, name, position, completed properties
  * @param {Function} callback - Callback function with error parameter
@@ -425,6 +437,7 @@ module.exports = {
   addItem,
   updateItem,
   deleteItem,
+  clearItems,
   bulkUpdateItems,
   bulkUpdatePositions,
   getListItems,
