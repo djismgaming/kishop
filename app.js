@@ -830,9 +830,15 @@ function saveNewItemToItems(item) {
 // ==========================================================================
 
 function initTheme() {
-  // Check for saved theme preference or default to light
-  const savedTheme = localStorage.getItem('fluid-ledger-theme') || 'light';
-  setTheme(savedTheme);
+  // Check OS preference first
+  const savedTheme = localStorage.getItem('fluid-ledger-theme');
+  if (savedTheme) {
+    setTheme(savedTheme);
+  } else {
+    // No saved pref, use system preference
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    setTheme(mediaQuery.matches ? 'dark' : 'light');
+  }
 }
 
 function setTheme(theme) {
