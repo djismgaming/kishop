@@ -194,6 +194,12 @@ function clearListItems() {
   }).catch(e => console.error('Error clearing list items:', e));
 }
 
+function clearItems() {
+  fetch(`${API_BASE}/items`, {
+    method: 'DELETE'
+  }).catch(e => console.error('Error clearing items:', e));
+}
+
 function toggleListItemComplete(id) {
   const index = appData.listItems.findIndex(item => item.id === id);
   if (index === -1) return;
@@ -789,9 +795,8 @@ function setupEventListeners() {
   if (clearRecentBtn) {
     clearRecentBtn.addEventListener('click', () => {
       if (confirm('Clear all recent items?')) {
-        const itemIds = appData.items.filter(item => item.id).map(item => item.id);
         appData.items = [];
-        itemIds.forEach(id => deleteItem(id));
+        clearItems();
         renderRecentItems();
         updateBudgetHero();
       }

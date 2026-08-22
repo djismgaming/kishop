@@ -144,6 +144,15 @@ function deleteItem(db, id) {
   });
 }
 
+function clearItems(db) {
+  return new Promise((resolve, reject) => {
+    db.run('DELETE FROM budget_items', [], function(err) {
+      if (err) reject(err);
+      else resolve(this.changes);
+    });
+  });
+}
+
 function bulkUpdateItems(db, items) {
   return new Promise((resolve, reject) => {
     db.serialize(() => {
@@ -417,6 +426,18 @@ describe('Database Module', () => {
     test('should return 0 for non-existent id', async () => {
       const changes = await deleteItem(db, 99999);
       expect(changes).toBe(0);
+    });
+  });
+
+  describe('clearItems', () => {
+    test('should delete all items and report count', async () => {
+      await addItem(db, { quantity: '1', price: '10', name: 'Item 1' });
+      await addItem(db, { quantity: '2', price: '20', name: 'Item 2' });
+
+      const changes = await clearItems(db);
+      expect(changes).toBe(2);
+      const items = await getItems(db);
+      expect(items.length).toBe(0);
     });
   });
 

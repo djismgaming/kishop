@@ -140,6 +140,7 @@ beforeAll(async () => {
       db.run(`UPDATE budget_items SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, values, function(err) { cb(err, this.changes); });
     },
     deleteItem: (id, cb) => db.run('DELETE FROM budget_items WHERE id = ?', [id], function(err) { cb(err, this.changes); }),
+    clearItems: (cb) => db.run('DELETE FROM budget_items', [], function(err) { cb(err, this.changes); }),
     getListItems: (cb) => db.all('SELECT id, quantity, name, position, completed FROM list_items ORDER BY position ASC', (err, rows) => cb(err, rows || [])),
     addListItem: (item, cb) => {
       const stmt = db.prepare('INSERT INTO list_items (quantity, name, position) VALUES (?, ?, COALESCE((SELECT MAX(position) FROM list_items), -1) + 1)');
@@ -255,6 +256,13 @@ beforeAll(async () => {
     });
   });
   
+  app.delete('/api/items', (req, res) => {
+    mockDb.clearItems((err, count) => {
+      if (err) res.status(500).json({ error: 'Failed to clear items' });
+      else res.json({ success: true, deleted: count });
+    });
+  });
+
   app.delete('/api/items/:id', (req, res) => {
     const id = req.params.id;
     mockDb.deleteItem(id, (err) => {
@@ -507,6 +515,27 @@ describe('DELETE /api/items/:id', () => {
 });
 
 // ================== LIST ITEMS ENDPOINTS ==================
+
+describe('DELETE /api/items', () => {
+  test('should clear all items and report count', async () => {
+    await request(app).post('/api/items').send({ quantity: '1', price: '10', name: 'Item 1' });
+    await request(app).post('/api/items').send({ quantity: '2', price: '20', name: 'Item 2' });
+
+    const res = await request(app).delete('/api/items');
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.deleted).toBe(2);
+
+    const getRes = await request(app).get('/api/items');
+    expect(getRes.body.items.length).toBe(0);
+  });
+
+  test('should succeed when there are no items', async () => {
+    const res = await request(app).delete('/api/items');
+    expect(res.status).toBe(200);
+    expect(res.body.deleted).toBe(0);
+  });
+});
 
 describe('GET /api/list-items', () => {
   test('should return empty array when no items', async () => {
