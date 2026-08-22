@@ -816,23 +816,6 @@ h1, h2, h3, h4, h5, h6 {
   background: var(--surface-container);
 }
 
-/* Description Input */
-.list-item-card__description-input {
-  width: 100%;
-  font-size: 0.75rem;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  padding: var(--spacing-1) var(--spacing-2);
-  color: var(--on-surface-variant);
-  transition: all var(--transition-fast);
-}
-
-.list-item-card__description-input:focus {
-  outline: none;
-  border-color: var(--primary);
-  background: var(--surface-container);
-}
 
 /* Price Row (Budget Tracker) */
 .list-item-card__price-row {
@@ -1026,15 +1009,13 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Input Fields in Cards */
 .list-item-card__name-input,
-.list-item-card__price-input,
-.list-item-card__description-input {
+.list-item-card__price-input {
   font-family: inherit;
   transition: all var(--transition-fast);
 }
 
 .list-item-card__name-input:focus,
-.list-item-card__price-input:focus,
-.list-item-card__description-input:focus {
+.list-item-card__price-input:focus {
   outline: none;
   border-color: var(--primary);
   background: var(--surface-container);
