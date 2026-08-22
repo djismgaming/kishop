@@ -184,7 +184,8 @@ beforeAll(async () => {
       values.push(id);
       db.run(`UPDATE list_items SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, values, function(err) { cb(err, this.changes); });
     },
-    deleteListItem: (id, cb) => db.run('DELETE FROM list_items WHERE id = ?', [id], function(err) { cb(err, this.changes); })
+    deleteListItem: (id, cb) => db.run('DELETE FROM list_items WHERE id = ?', [id], function(err) { cb(err, this.changes); }),
+    clearListItems: (cb) => db.run('DELETE FROM list_items', [], function(err) { cb(err, this.changes); })
   };
   
   // Mount routes
@@ -298,6 +299,13 @@ beforeAll(async () => {
     });
   });
   
+  app.delete('/api/list-items', (req, res) => {
+    mockDb.clearListItems((err, count) => {
+      if (err) res.status(500).json({ error: 'Failed to clear list items' });
+      else res.json({ success: true, deleted: count });
+    });
+  });
+
   app.delete('/api/list-items/:id', (req, res) => {
     const id = req.params.id;
     mockDb.deleteListItem(id, (err) => {
@@ -585,5 +593,26 @@ describe('DELETE /api/list-items/:id', () => {
   test('should handle non-existent ID', async () => {
     const res = await request(app).delete('/api/list-items/99999');
     expect(res.status).toBe(200);
+  });
+});
+
+describe('DELETE /api/list-items', () => {
+  test('should clear all list items', async () => {
+    await request(app).post('/api/list-items').send({ quantity: '1', name: 'Item A' });
+    await request(app).post('/api/list-items').send({ quantity: '2', name: 'Item B' });
+
+    const res = await request(app).delete('/api/list-items');
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.deleted).toBe(2);
+
+    const getRes = await request(app).get('/api/list-items');
+    expect(getRes.body.items.length).toBe(0);
+  });
+
+  test('should succeed when there are no items', async () => {
+    const res = await request(app).delete('/api/list-items');
+    expect(res.status).toBe(200);
+    expect(res.body.deleted).toBe(0);
   });
 });

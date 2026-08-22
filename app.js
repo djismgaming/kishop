@@ -188,6 +188,12 @@ function deleteListItem(id) {
   }).catch(e => console.error('Error deleting list item:', e));
 }
 
+function clearListItems() {
+  fetch(`${API_BASE}/list-items`, {
+    method: 'DELETE'
+  }).catch(e => console.error('Error clearing list items:', e));
+}
+
 function toggleListItemComplete(id) {
   const index = appData.listItems.findIndex(item => item.id === id);
   if (index === -1) return;
@@ -791,6 +797,19 @@ function setupEventListeners() {
         itemIds.forEach(id => deleteItem(id));
         renderRecentItems();
         updateBudgetHero();
+      }
+    });
+  }
+
+  // Clear All Button (Shopping List)
+  const clearListBtn = document.getElementById('clear-list-btn');
+  if (clearListBtn) {
+    clearListBtn.addEventListener('click', () => {
+      if (confirm('Clear all shopping list items?')) {
+        appData.listItems = [];
+        clearListItems();
+        renderActiveItems();
+        renderCompletedItems();
       }
     });
   }
