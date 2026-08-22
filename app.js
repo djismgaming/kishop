@@ -470,7 +470,6 @@ function createListItemElement(item, index) {
       <div class="list-item-card__header">
         <input type="text" class="list-item-card__name-input" value="${escapeHTML(name)}" placeholder="Item name"/>
       </div>
-      <input type="text" class="list-item-card__description-input" value="${escapeHTML(item.description || '')}" placeholder="Add description..."/>
     </div>
     <div class="list-item-card__qty-controls">
       <button class="list-item-card__qty-btn" data-action="decrease" aria-label="Decrease quantity">
@@ -498,11 +497,6 @@ function createListItemElement(item, index) {
     saveListItem(index, 'name', item.name);
   });
 
-  const descriptionInput = div.querySelector('.list-item-card__description-input');
-  descriptionInput.addEventListener('change', (e) => {
-    item.description = e.target.value;
-    saveListItem(index, 'description', item.description);
-  });
 
   // Quantity buttons
   const qtyButtons = div.querySelectorAll('.list-item-card__qty-btn');
@@ -603,7 +597,7 @@ function toggleItemComplete(id) {
 }
 
 function addItemToList() {
-  const item = { quantity: '1', name: '', description: '', completed: false, price: '' };
+  const item = { quantity: '1', name: '', completed: false, price: '' };
   appData.listItems.push(item);
   renderActiveItems();
   renderCompletedItems();
@@ -772,7 +766,7 @@ function setupEventListeners() {
     quickAddSubmit.addEventListener('click', () => {
       const name = quickAddInput.value.trim();
       if (name) {
-        const item = { name, quantity: '1', description: '', completed: false, price: '' };
+        const item = { name, quantity: '1', completed: false, price: '' };
         appData.listItems.push(item);
         renderActiveItems();
         saveNewListItem(item);

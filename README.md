@@ -7,7 +7,7 @@ A mobile-first web app for managing shopping lists with tax-aware totals and tra
 - **Budget Management**: Set a maximum subtotal amount at the top with real-time progress tracking
 - **Two Views**: Budget Tracker for expense monitoring and Shopping List for item management
 - **Rapid Entry**: Quickly add items by price and quantity in the Budget Tracker
-- **Shopping List**: Add items with names, descriptions, and quantities; mark items as completed
+- **Shopping List**: Add items with names and quantities; mark items as completed
 - **Filter Chips**: Sort shopping list items by Recently Added, A-Z, or By Quantity
 - **Quick Add Bar**: Floating input bar for fast item entry in the Shopping List view
 - **Dark/Light Theme**: Toggle between light and dark modes (preference saved locally)
@@ -30,7 +30,7 @@ A mobile-first web app for managing shopping lists with tax-aware totals and tra
 ### Shopping List View
 1. Switch to the Shopping List tab using the bottom navigation
 2. Use the **Quick Add** bar to add items by name
-3. Edit item names, descriptions, and quantities inline
+3. Edit item names and quantities inline
 4. Check items off as you shop (they move to the Completed section)
 5. Filter items using the chip bar (Recently Added, A-Z, By Quantity)
 
