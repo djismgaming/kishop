@@ -2,6 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <script>
+    // Set the theme before first paint so dark-mode users don't see a flash of light.
+    (function () {
+      var theme = null;
+      try { theme = localStorage.getItem('fluid-ledger-theme'); } catch (e) {}
+      if (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches) theme = 'dark';
+      document.documentElement.setAttribute('data-theme', theme || 'light');
+    })();
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">

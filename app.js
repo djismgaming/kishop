@@ -829,33 +829,50 @@ function saveNewItemToItems(item) {
 // Theme Management
 // ==========================================================================
 
+const THEME_STORAGE_KEY = 'fluid-ledger-theme';
+
+function systemTheme() {
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
 function initTheme() {
-  // Check OS preference first
-  const savedTheme = localStorage.getItem('fluid-ledger-theme');
+  const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
   if (savedTheme) {
-    setTheme(savedTheme);
+    // Explicit user choice wins
+    applyTheme(savedTheme);
   } else {
-    // No saved pref, use system preference
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    setTheme(mediaQuery.matches ? 'dark' : 'light');
+    // No explicit choice: follow the system preference without persisting it,
+    // and keep following live OS changes until the user picks a theme.
+    applyTheme(systemTheme());
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+      if (!localStorage.getItem(THEME_STORAGE_KEY)) {
+        applyTheme(e.matches ? 'dark' : 'light');
+      }
+    });
   }
 }
 
-function setTheme(theme) {
+// Applies a theme to the UI without persisting it.
+function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
-  localStorage.setItem('fluid-ledger-theme', theme);
-  
+
   // Update theme icon
   const themeIcon = document.getElementById('theme-icon');
   if (themeIcon) {
     themeIcon.textContent = theme === 'dark' ? 'light_mode' : 'dark_mode';
   }
-  
+
   // Update theme color meta tag
   const themeColor = document.querySelector('meta[name="theme-color"]');
   if (themeColor) {
     themeColor.setAttribute('content', theme === 'dark' ? '#0b160e' : '#006e1c');
   }
+}
+
+// Persists an explicit user choice and applies it.
+function setTheme(theme) {
+  localStorage.setItem(THEME_STORAGE_KEY, theme);
+  applyTheme(theme);
 }
 
 function toggleTheme() {
