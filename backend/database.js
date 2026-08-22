@@ -348,6 +348,13 @@ function deleteListItem(id, callback) {
   });
 }
 
+function clearListItems(callback) {
+  db.run('DELETE FROM list_items', [], function(err) {
+    if (err) callback(err);
+    else callback(null, this.changes);
+  });
+}
+
 function bulkUpdateListItems(items, callback) {
   db.run('BEGIN TRANSACTION', (beginErr) => {
     if (beginErr) {
@@ -424,5 +431,6 @@ module.exports = {
   addListItem,
   updateListItem,
   deleteListItem,
+  clearListItems,
   bulkUpdateListItems
 };

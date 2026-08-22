@@ -509,6 +509,23 @@ describe('Database Module', () => {
     });
   });
 
+  describe('clearListItems', () => {
+    test('should delete all list items and report count', async () => {
+      await addListItem(db, { quantity: '1', name: 'Item A' });
+      await addListItem(db, { quantity: '2', name: 'Item B' });
+
+      const changes = await new Promise((resolve, reject) => {
+        db.run('DELETE FROM list_items', [], function(err) {
+          if (err) reject(err);
+          else resolve(this.changes);
+        });
+      });
+      expect(changes).toBe(2);
+      const items = await getListItems(db);
+      expect(items.length).toBe(0);
+    });
+  });
+
   describe('bulkUpdateListItems', () => {
     test('should replace all list items', async () => {
       const items = [

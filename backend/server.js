@@ -179,6 +179,17 @@ app.put('/api/list-items/:id', (req, res) => {
   });
 });
 
+app.delete('/api/list-items', (req, res) => {
+  db.clearListItems((err, count) => {
+    if (err) {
+      console.error('Error clearing list items:', err);
+      res.status(500).json({ error: 'Failed to clear list items' });
+    } else {
+      res.json({ success: true, deleted: count });
+    }
+  });
+});
+
 app.delete('/api/list-items/:id', (req, res) => {
   const id = req.params.id;
   db.deleteListItem(id, (err) => {

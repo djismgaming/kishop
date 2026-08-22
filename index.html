@@ -129,7 +129,10 @@
         <section class="shopping-list-section">
           <div class="shopping-list__section-header">
             <h2 class="shopping-list__section-title">Essential Supplies</h2>
-            <span class="shopping-list__section-count" id="active-count">0 ITEMS</span>
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span class="shopping-list__section-count" id="active-count">0 ITEMS</span>
+              <button class="label-sm" style="background: none; border: none; color: var(--primary); cursor: pointer;" id="clear-list-btn">Clear All</button>
+            </div>
           </div>
           <div id="active-items-list" class="shopping-list">
             <!-- Active items will be rendered here -->
