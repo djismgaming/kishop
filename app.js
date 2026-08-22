@@ -327,18 +327,15 @@ function updateBudgetHero() {
     if (percentage >= 100) {
       statusEl.innerHTML = '<span class="material-symbols-outlined" style="font-size: 14px;">error</span><span class="budget-hero__status-label">Over Budget</span>';
       statusEl.style.background = 'var(--tertiary-fixed)';
-      const label = statusEl.querySelector('.budget-hero__status-label');
-      if (label) label.style.color = 'var(--on-tertiary-fixed-variant)';
+      statusEl.style.color = 'var(--on-tertiary-fixed-variant)';
     } else if (percentage >= 75) {
       statusEl.innerHTML = '<span class="material-symbols-outlined" style="font-size: 14px;">warning</span><span class="budget-hero__status-label">Warning</span>';
       statusEl.style.background = 'var(--secondary-fixed)';
-      const label = statusEl.querySelector('.budget-hero__status-label');
-      if (label) label.style.color = 'var(--on-secondary-fixed-variant)';
+      statusEl.style.color = 'var(--on-secondary-fixed-variant)';
     } else {
       statusEl.innerHTML = '<span class="material-symbols-outlined" style="font-size: 14px;">check_circle</span><span class="budget-hero__status-label">Healthy Status</span>';
       statusEl.style.background = 'var(--primary-fixed)';
-      const label = statusEl.querySelector('.budget-hero__status-label');
-      if (label) label.style.color = 'var(--on-primary-fixed-variant)';
+      statusEl.style.color = 'var(--on-primary-fixed-variant)';
     }
   }
 
