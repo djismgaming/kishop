@@ -829,27 +829,50 @@ function saveNewItemToItems(item) {
 // Theme Management
 // ==========================================================================
 
-function initTheme() {
-  // Check for saved theme preference or default to light
-  const savedTheme = localStorage.getItem('fluid-ledger-theme') || 'light';
-  setTheme(savedTheme);
+const THEME_STORAGE_KEY = 'fluid-ledger-theme';
+
+function systemTheme() {
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
-function setTheme(theme) {
+function initTheme() {
+  const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+  if (savedTheme) {
+    // Explicit user choice wins
+    applyTheme(savedTheme);
+  } else {
+    // No explicit choice: follow the system preference without persisting it,
+    // and keep following live OS changes until the user picks a theme.
+    applyTheme(systemTheme());
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+      if (!localStorage.getItem(THEME_STORAGE_KEY)) {
+        applyTheme(e.matches ? 'dark' : 'light');
+      }
+    });
+  }
+}
+
+// Applies a theme to the UI without persisting it.
+function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
-  localStorage.setItem('fluid-ledger-theme', theme);
-  
+
   // Update theme icon
   const themeIcon = document.getElementById('theme-icon');
   if (themeIcon) {
     themeIcon.textContent = theme === 'dark' ? 'light_mode' : 'dark_mode';
   }
-  
+
   // Update theme color meta tag
   const themeColor = document.querySelector('meta[name="theme-color"]');
   if (themeColor) {
     themeColor.setAttribute('content', theme === 'dark' ? '#0b160e' : '#006e1c');
   }
+}
+
+// Persists an explicit user choice and applies it.
+function setTheme(theme) {
+  localStorage.setItem(THEME_STORAGE_KEY, theme);
+  applyTheme(theme);
 }
 
 function toggleTheme() {
