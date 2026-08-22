@@ -112,35 +112,35 @@
 
 /* Dark Theme: "The Obsidian Conservatory" */
 [data-theme="dark"] {
-  /* Primary Palette - Emerald Green */
-  --primary: #78dc77;
-  --primary-container: #4caf50;
-  --primary-fixed: #94f990;
-  --primary-fixed-dim: #78dc77;
-  --on-primary: #00390a;
-  --on-primary-container: #003c0b;
-  --on-primary-fixed: #002204;
-  --on-primary-fixed-variant: #005313;
+  /* Primary Palette - Soft Sage Green */
+  --primary: #86cb8e;
+  --primary-container: #2e5b39;
+  --primary-fixed: #a5d7ab;
+  --primary-fixed-dim: #86cb8e;
+  --on-primary: #00390f;
+  --on-primary-container: #b4ecba;
+  --on-primary-fixed: #00210a;
+  --on-primary-fixed-variant: #00531d;
 
-  /* Secondary Palette - Light Emerald */
-  --secondary: #88d982;
-  --secondary-container: #005b14;
-  --secondary-fixed: #a3f69c;
-  --secondary-fixed-dim: #88d982;
-  --on-secondary: #003909;
-  --on-secondary-container: #81d27c;
-  --on-secondary-fixed: #002204;
-  --on-secondary-fixed-variant: #005312;
+  /* Secondary Palette - Warm Amber (matches light theme semantics) */
+  --secondary: #e6c069;
+  --secondary-container: #5f4519;
+  --secondary-fixed: #ffdfa4;
+  --secondary-fixed-dim: #e6c069;
+  --on-secondary: #3d2e05;
+  --on-secondary-container: #f5dfa8;
+  --on-secondary-fixed: #241a00;
+  --on-secondary-fixed-variant: #574312;
 
-  /* Tertiary Palette - Amber/Gold */
-  --tertiary: #fabd00;
-  --tertiary-container: #c49400;
-  --tertiary-fixed: #ffdf9e;
-  --tertiary-fixed-dim: #fabd00;
-  --on-tertiary: #3f2e00;
-  --on-tertiary-container: #433000;
-  --on-tertiary-fixed: #261a00;
-  --on-tertiary-fixed-variant: #5b4300;
+  /* Tertiary Palette - Soft Coral (matches light theme semantics) */
+  --tertiary: #f2a39b;
+  --tertiary-container: #7a2f28;
+  --tertiary-fixed: #ffcfc5;
+  --tertiary-fixed-dim: #f2a39b;
+  --on-tertiary: #4f100a;
+  --on-tertiary-container: #ffdad3;
+  --on-tertiary-fixed: #380d07;
+  --on-tertiary-fixed-variant: #63332b;
 
   /* Error Palette */
   --error: #ffb4ab;
@@ -148,32 +148,32 @@
   --on-error: #690005;
   --on-error-container: #ffdad6;
 
-  /* Surface Hierarchy - Dark (Deep Forest Green) */
-  --surface: #0b160e;
-  --surface-bright: #303c33;
-  --surface-dim: #0b160e;
-  --surface-container: #17221a;
-  --surface-container-low: #131e16;
-  --surface-container-lowest: #061009;
-  --surface-container-high: #212d24;
-  --surface-container-highest: #2c382e;
-  --surface-variant: #2c382e;
-  --on-surface: #d9e6d9;
-  --on-surface-variant: #becab9;
-  --on-background: #d9e6d9;
-  --background: #0b160e;
+  /* Surface Hierarchy - Dark (Soft Graphite with a hint of green) */
+  --surface: #191c19;
+  --surface-bright: #3c403b;
+  --surface-dim: #121412;
+  --surface-container: #1e211e;
+  --surface-container-low: #1a1d1a;
+  --surface-container-lowest: #101310;
+  --surface-container-high: #292c29;
+  --surface-container-highest: #343734;
+  --surface-variant: #343734;
+  --on-surface: #e2e3de;
+  --on-surface-variant: #c2c6bd;
+  --on-background: #e2e3de;
+  --background: #191c19;
 
   /* Outline & Borders */
-  --outline: #899484;
-  --outline-variant: #3f4a3c;
+  --outline: #8c928a;
+  --outline-variant: #464b44;
 
   /* Inverse */
-  --inverse-surface: #d9e6d9;
-  --inverse-on-surface: #28332a;
-  --inverse-primary: #006e1c;
+  --inverse-surface: #e2e3de;
+  --inverse-on-surface: #2f322f;
+  --inverse-primary: #2f6d3b;
 
   /* Utility */
-  --surface-tint: #78dc77;
+  --surface-tint: #86cb8e;
 }
 
 /* --------------------------------------------------------------------------
@@ -353,7 +353,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 [data-theme="dark"] .top-app-bar {
-  background: rgba(11, 22, 14, 0.8);
+  background: rgba(25, 28, 25, 0.8);
 }
 
 .top-app-bar__title {
@@ -413,8 +413,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 [data-theme="dark"] .bottom-nav {
-  background: rgba(19, 30, 22, 0.9);
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
+  background: rgba(26, 29, 26, 0.9);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.35);
 }
 
 .bottom-nav__item {
@@ -1332,11 +1332,11 @@ h1, h2, h3, h4, h5, h6 {
 @keyframes pulse-dark {
   0%, 100% {
     transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(120, 220, 119, 0.5);
+    box-shadow: 0 0 0 0 rgba(134, 203, 142, 0.5);
   }
   50% {
     transform: scale(1.05);
-    box-shadow: 0 0 0 10px rgba(120, 220, 119, 0);
+    box-shadow: 0 0 0 10px rgba(134, 203, 142, 0);
   }
 }
 
