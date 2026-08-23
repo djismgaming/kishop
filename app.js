@@ -617,8 +617,19 @@ function addItemToList() {
 // View Management
 // ==========================================================================
 
+const VIEW_STORAGE_KEY = 'kishop-view';
+
+function persistCurrentView(viewName) {
+  try {
+    localStorage.setItem(VIEW_STORAGE_KEY, viewName);
+  } catch (e) {
+    console.error('Error saving current view:', e);
+  }
+}
+
 function switchView(viewName) {
   appData.currentView = viewName;
+  persistCurrentView(viewName);
 
   const budgetView = document.getElementById('budget-tracker-view');
   const listView = document.getElementById('shopping-list-view');
@@ -946,6 +957,12 @@ async function init() {
 
   // Setup event listeners
   setupEventListeners();
+
+  // Restore the last active view so refreshing doesn't reset to the Budget view
+  const savedView = localStorage.getItem(VIEW_STORAGE_KEY);
+  if (savedView && savedView !== appData.currentView) {
+    switchView(savedView);
+  }
 
   // Initial renders
   renderRecentItems();
