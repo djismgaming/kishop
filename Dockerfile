@@ -1,4 +1,4 @@
-FROM node:22.22.2-alpine3.23 AS backend-builder
+FROM node:22.23.2-alpine3.24 AS backend-builder
 
 WORKDIR /app
 
@@ -7,11 +7,17 @@ RUN npm ci --omit=dev
 
 COPY backend/*.js ./
 
-FROM node:22.22.2-alpine3.23
+FROM node:22.23.2-alpine3.24
 
 WORKDIR /app
 
-RUN apk add --no-cache nginx
+RUN apk add --no-cache nginx su-exec && \
+    # Remove npm/corepack from the runtime image - not needed to run the app,
+    # and their bundled dependencies carry known CVEs
+    rm -rf /usr/local/lib/node_modules/npm \
+           /usr/local/lib/node_modules/corepack \
+           /opt/yarn-v* /usr/local/bin/npm /usr/local/bin/npx \
+           /usr/local/bin/corepack /usr/local/bin/yarn* /usr/local/bin/yarnpkg
 
 COPY --from=backend-builder /app/node_modules ./node_modules
 COPY --from=backend-builder /app/*.js ./
@@ -26,7 +32,6 @@ COPY *.png /usr/share/nginx/html/
 
 RUN touch /usr/share/nginx/html/.gitkeep
 
-RUN apk add --no-cache su-exec
 
 RUN mkdir -p /etc/nginx/http.d
 
