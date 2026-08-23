@@ -32,6 +32,17 @@ let appData = {
 
 let budgetDebounceTimer = null;
 
+// Authentication state
+let currentUser = null;
+
+/**
+ * Handle a fetch response that came back 401 by forcing a re-login
+ */
+function handleUnauthorized() {
+  currentUser = null;
+  showLoginView();
+}
+
 // ==========================================================================
 // API Functions
 // ==========================================================================
@@ -217,6 +228,274 @@ function toggleListItemComplete(id) {
       body: JSON.stringify({ completed: item.completed })
     }).catch(e => console.error('Error updating complete:', e));
   }
+}
+
+// ==========================================================================
+// Authentication & User Management
+// ==========================================================================
+
+async function login(username, password) {
+  const response = await fetch(`${API_BASE}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || 'Login failed');
+  }
+  return data.user;
+}
+
+async function logout() {
+  try {
+    await fetch(`${API_BASE}/auth/logout`, { method: 'POST' });
+  } catch (e) {
+    console.error('Error logging out:', e);
+  }
+  currentUser = null;
+  showLoginView();
+}
+
+function showLoginView() {
+  document.getElementById('login-view').classList.remove('hidden');
+  document.getElementById('budget-tracker-view').classList.add('hidden');
+  document.getElementById('shopping-list-view').classList.add('hidden');
+  document.getElementById('admin-view').classList.add('hidden');
+  document.getElementById('quick-add-bar').classList.add('hidden');
+  document.querySelector('.bottom-nav').style.display = 'none';
+  document.getElementById('user-menu').style.display = 'none';
+
+  const errorEl = document.getElementById('login-error');
+  errorEl.classList.add('hidden');
+  const form = document.getElementById('login-form');
+  form.reset();
+  document.getElementById('login-username').focus();
+}
+
+function showAppView(user) {
+  currentUser = user;
+  document.getElementById('login-view').classList.add('hidden');
+  document.querySelector('.bottom-nav').style.display = '';
+
+  const userMenu = document.getElementById('user-menu');
+  userMenu.style.display = '';
+  document.getElementById('user-menu-username').textContent = user.username;
+
+  const adminBtn = document.getElementById('admin-panel-btn');
+  adminBtn.classList.toggle('hidden', user.role !== 'admin');
+
+  switchView(localStorage.getItem(VIEW_STORAGE_KEY) || 'budget-tracker');
+}
+
+async function attemptLogin(event) {
+  event.preventDefault();
+  const submitBtn = document.getElementById('login-submit');
+  const errorEl = document.getElementById('login-error');
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+
+  errorEl.classList.add('hidden');
+  submitBtn.disabled = true;
+  try {
+    const user = await login(username, password);
+    showAppView(user);
+    await loadData();
+    updateBudgetHero();
+    renderRecentItems();
+    renderActiveItems();
+    renderCompletedItems();
+  } catch (e) {
+    errorEl.textContent = e.message;
+    errorEl.classList.remove('hidden');
+  } finally {
+    submitBtn.disabled = false;
+  }
+}
+
+function toggleUserMenu(forceState) {
+  const dropdown = document.getElementById('user-menu-dropdown');
+  const show = forceState !== undefined ? forceState : dropdown.classList.contains('hidden');
+  dropdown.classList.toggle('hidden', !show);
+}
+
+// --------------------------------------------------------------------------
+// Admin panel
+// --------------------------------------------------------------------------
+
+async function openAdminPanel() {
+  toggleUserMenu(false);
+  switchAdminView(true);
+  await loadUsers();
+}
+
+function switchAdminView(showAdmin) {
+  const views = ['budget-tracker-view', 'shopping-list-view', 'admin-view'];
+  views.forEach(id => document.getElementById(id).classList.add('hidden'));
+  document.getElementById('quick-add-bar').classList.toggle('hidden', true);
+  if (!showAdmin) {
+    switchView(appData.currentView || 'budget-tracker');
+    return;
+  }
+  document.getElementById('admin-view').classList.remove('hidden');
+  document.querySelectorAll('.bottom-nav__item').forEach(item => {
+    item.classList.remove('bottom-nav__item--active');
+  });
+}
+
+async function apiCall(url, options = {}) {
+  const response = await fetch(url, {
+    headers: { 'Content-Type': 'application/json' },
+    ...options
+  });
+  if (response.status === 401) {
+    handleUnauthorized();
+    throw new Error('Not authenticated');
+  }
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || `Request failed (${response.status})`);
+  }
+  return data;
+}
+
+async function loadUsers() {
+  const listError = document.getElementById('admin-list-error');
+  listError.classList.add('hidden');
+  try {
+    const data = await apiCall(`${API_BASE}/users`);
+    renderUserList(data.users);
+  } catch (e) {
+    if (e.message !== 'Not authenticated') {
+      listError.textContent = e.message;
+      listError.classList.remove('hidden');
+    }
+  }
+}
+
+function renderUserList(users) {
+  const container = document.getElementById('admin-users-list');
+  document.getElementById('admin-user-count').textContent = users.length + ' USERS';
+  container.innerHTML = '';
+
+  users.forEach(user => {
+    const row = document.createElement('div');
+    row.className = 'admin-user-row';
+    row.innerHTML = `
+      <div class="admin-user-row__info">
+        <span class="material-symbols-outlined admin-user-row__icon">${user.role === 'admin' ? 'shield_person' : 'person'}</span>
+        <div>
+          <div class="admin-user-row__name">${escapeHTML(user.username)}</div>
+          <div class="admin-user-row__role">${user.role}</div>
+        </div>
+      </div>
+      <div class="admin-user-row__actions">
+        <button class="admin-user-row__btn" data-action="reset-password" aria-label="Reset password">
+          <span class="material-symbols-outlined">key</span>
+        </button>
+        <button class="admin-user-row__btn admin-user-row__btn--danger" data-action="delete" aria-label="Delete user">
+          <span class="material-symbols-outlined">delete</span>
+        </button>
+      </div>
+    `;
+
+    row.querySelector('[data-action="reset-password"]').addEventListener('click', () => {
+      openResetPasswordDialog(user);
+    });
+
+    row.querySelector('[data-action="delete"]').addEventListener('click', async () => {
+      if (!confirm(`Delete user "${user.username}" and all their data?`)) return;
+      try {
+        await apiCall(`${API_BASE}/users/${user.id}`, { method: 'DELETE' });
+        await loadUsers();
+      } catch (e) {
+        if (e.message !== 'Not authenticated') {
+          alert(e.message);
+        }
+      }
+    });
+
+    container.appendChild(row);
+  });
+}
+
+async function createUserFromForm(event) {
+  event.preventDefault();
+  const formError = document.getElementById('admin-form-error');
+  formError.classList.add('hidden');
+
+  const username = document.getElementById('admin-new-username').value.trim();
+  const password = document.getElementById('admin-new-password').value;
+  const role = document.getElementById('admin-new-role').value;
+
+  try {
+    await apiCall(`${API_BASE}/users`, {
+      method: 'POST',
+      body: JSON.stringify({ username, password, role })
+    });
+    document.getElementById('admin-add-user-form').reset();
+    await loadUsers();
+  } catch (e) {
+    if (e.message !== 'Not authenticated') {
+      formError.textContent = e.message;
+      formError.classList.remove('hidden');
+    }
+  }
+}
+
+let resetPasswordTargetId = null;
+
+function openResetPasswordDialog(user) {
+  resetPasswordTargetId = user.id;
+  document.getElementById('reset-password-username').textContent = `Set a new password for "${user.username}"`;
+  document.getElementById('reset-password-input').value = '';
+  document.getElementById('reset-password-error').classList.add('hidden');
+  document.getElementById('reset-password-overlay').classList.remove('hidden');
+  document.getElementById('reset-password-input').focus();
+}
+
+function closeResetPasswordDialog() {
+  document.getElementById('reset-password-overlay').classList.add('hidden');
+  resetPasswordTargetId = null;
+}
+
+async function submitResetPassword(event) {
+  event.preventDefault();
+  const errorEl = document.getElementById('reset-password-error');
+  const password = document.getElementById('reset-password-input').value;
+
+  try {
+    await apiCall(`${API_BASE}/users/${resetPasswordTargetId}/password`, {
+      method: 'PUT',
+      body: JSON.stringify({ password })
+    });
+    closeResetPasswordDialog();
+  } catch (e) {
+    if (e.message !== 'Not authenticated') {
+      errorEl.textContent = e.message;
+      errorEl.classList.remove('hidden');
+    }
+  }
+}
+
+function setupAuthEventListeners() {
+  document.getElementById('login-form').addEventListener('submit', attemptLogin);
+  document.getElementById('logout-btn').addEventListener('click', logout);
+  document.getElementById('admin-panel-btn').addEventListener('click', openAdminPanel);
+
+  document.getElementById('user-menu-trigger').addEventListener('click', () => toggleUserMenu());
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#user-menu')) {
+      toggleUserMenu(false);
+    }
+  });
+
+  document.getElementById('admin-add-user-form').addEventListener('submit', createUserFromForm);
+  document.getElementById('reset-password-form').addEventListener('submit', submitResetPassword);
+  document.getElementById('reset-password-cancel').addEventListener('click', closeResetPasswordDialog);
+  document.getElementById('reset-password-overlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeResetPasswordDialog();
+  });
 }
 
 // ==========================================================================
@@ -634,6 +913,12 @@ function switchView(viewName) {
   const budgetView = document.getElementById('budget-tracker-view');
   const listView = document.getElementById('shopping-list-view');
   const quickAddBar = document.getElementById('quick-add-bar');
+  const adminView = document.getElementById('admin-view');
+
+  // Leaving the admin panel hides it regardless of the target view
+  if (adminView) {
+    adminView.classList.add('hidden');
+  }
 
   const navItems = document.querySelectorAll('.bottom-nav__item');
 
@@ -943,6 +1228,27 @@ async function init() {
   // Initialize theme first
   initTheme();
 
+  setupEventListeners();
+  setupAuthEventListeners();
+
+  // Check whether the visitor already has a valid session
+  let me = null;
+  try {
+    const response = await fetch(`${API_BASE}/auth/me`);
+    if (response.ok) {
+      me = (await response.json()).user;
+    }
+  } catch (e) {
+    console.error('Error checking session:', e);
+  }
+
+  if (!me) {
+    showLoginView();
+    return;
+  }
+
+  showAppView(me);
+
   await migrateFromLocalStorage();
   await loadData();
 
@@ -954,15 +1260,6 @@ async function init() {
 
   // Initialize budget display
   updateBudgetHero();
-
-  // Setup event listeners
-  setupEventListeners();
-
-  // Restore the last active view so refreshing doesn't reset to the Budget view
-  const savedView = localStorage.getItem(VIEW_STORAGE_KEY);
-  if (savedView && savedView !== appData.currentView) {
-    switchView(savedView);
-  }
 
   // Initial renders
   renderRecentItems();
