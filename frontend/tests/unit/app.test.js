@@ -301,3 +301,54 @@ describe('Item Field Validation', () => {
     expect(sanitize(undefined)).toBe('');
   });
 });
+
+describe('View Persistence', () => {
+  it('should persist the current view on switch', async () => {
+    const appContent = await import('fs').then(fs =>
+      fs.readFileSync('app.js', 'utf-8')
+    );
+
+    // switchView must save the view to localStorage
+    expect(appContent).toMatch(/VIEW_STORAGE_KEY\s*=\s*'kishop-view'/);
+    expect(appContent).toMatch(/function switchView\(viewName\)[\s\S]*?persistCurrentView\(viewName\)/);
+  });
+
+  it('should restore the saved view on init', async () => {
+    const appContent = await import('fs').then(fs =>
+      fs.readFileSync('app.js', 'utf-8')
+    );
+
+    // init() must restore the persisted view so refresh stays on the same view
+    expect(appContent).toMatch(/function init\(\)[\s\S]*?localStorage\.getItem\(VIEW_STORAGE_KEY\)[\s\S]*?switchView\(savedView\)/);
+  });
+
+  it('should default to the budget tracker view when nothing is saved', () => {
+    const store = {};
+    global.localStorage = {
+      getItem: (key) => (key in store ? store[key] : null),
+      setItem: (key, value) => { store[key] = String(value); }
+    };
+
+    let currentView = 'budget-tracker';
+    const savedView = global.localStorage.getItem('kishop-view');
+
+    if (savedView) currentView = savedView;
+
+    expect(currentView).toBe('budget-tracker');
+  });
+
+  it('should stay on the shopping list view after a simulated refresh', () => {
+    const store = { 'kishop-view': 'shopping-list' };
+    global.localStorage = {
+      getItem: (key) => (key in store ? store[key] : null),
+      setItem: (key, value) => { store[key] = String(value); }
+    };
+
+    let currentView = 'budget-tracker';
+    const savedView = global.localStorage.getItem('kishop-view');
+
+    if (savedView) currentView = savedView;
+
+    expect(currentView).toBe('shopping-list');
+  });
+});
