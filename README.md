@@ -15,6 +15,8 @@ A mobile-first web app for managing shopping lists with tax-aware totals and tra
 - **Real-time Calculations**: Automatic subtotals, tax (11.5%), and grand totals
 - **Visual Warnings**: Progress bar changes color when approaching budget (orange at 75%, red at 100%)
 - **Persistent Data**: All data saved to a SQLite database via the backend API
+- **User Accounts**: Each user has their own budget, budget items and shopping list
+- **Admin Panel**: Admins can create users (regular or admin), reset passwords, and delete users
 - **Auto-add Rows**: New rows are added automatically; Enter key navigation supported
 
 ## Usage
@@ -33,6 +35,17 @@ A mobile-first web app for managing shopping lists with tax-aware totals and tra
 3. Edit item names and quantities inline
 4. Check items off as you shop (they move to the Completed section)
 5. Filter items using the chip bar (Recently Added, A-Z, By Quantity)
+
+## User Accounts & Authentication
+
+- The app requires signing in; all data is scoped to the logged-in user
+- On first run a default admin account is created: username `admin`, password `kishop` — **change this immediately** via the Admin Panel
+- Admins can open the **Admin Panel** from the avatar menu in the top bar to:
+  - Create new users (with a password and `user`/`admin` role)
+  - Reset any user's password (this signs that user out everywhere)
+  - Delete users along with their data (the last remaining admin cannot be deleted)
+- Passwords are stored as salted scrypt hashes; sessions use HttpOnly cookies
+- Upgrading from an older single-user install: existing data is automatically migrated to the default admin account on startup
 
 ## Technical Details
 

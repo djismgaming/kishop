@@ -23,7 +23,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=2">
+  <link rel="stylesheet" href="styles.css?v=3">
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="manifest" href="manifest.json">
@@ -42,14 +42,47 @@
         <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark/light theme" style="background: none; border: none; cursor: pointer; padding: 8px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: background 0.2s; color: var(--on-surface);">
           <span class="material-symbols-outlined" id="theme-icon">dark_mode</span>
         </button>
-        <div class="top-app-bar__avatar">
-          <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuBWSMgHQuLxnFcx3b9LF1e6RoujWSzXPpgxqdIOfg_Yzj-xGXjwzA3DL3Td3pyOUJa-A_bns9O39LmmXOYz8B7XJYyuhuihOogEfAFmdOhm0nCPcSt3i2LRGeBpVbfBdD-q2WOHRRftdyFvUFEwcRGoPUSXhNZUb99J0MdFWV2ZKiOnzMVRXIwD4X-1kXlsmAO6uJdnrQH7WavbCDEEK4uWNwRZCw7fF3FiPuPCnOQhjurzi-CC-50WgLj6k54dL7ahKu6NHp83_A" alt="User profile">
+        <div class="user-menu" id="user-menu" style="display: none;">
+          <button class="user-menu__trigger" id="user-menu-trigger" aria-label="User menu" aria-haspopup="true">
+            <span class="material-symbols-outlined">account_circle</span>
+            <span class="user-menu__username" id="user-menu-username"></span>
+          </button>
+          <div class="user-menu__dropdown hidden" id="user-menu-dropdown">
+            <button class="user-menu__item hidden" id="admin-panel-btn">
+              <span class="material-symbols-outlined">manage_accounts</span>
+              Admin Panel
+            </button>
+            <button class="user-menu__item" id="logout-btn">
+              <span class="material-symbols-outlined">logout</span>
+              Logout
+            </button>
+          </div>
         </div>
       </div>
     </header>
 
     <!-- Main Content -->
     <main class="main-content" style="padding-top: 80px;">
+
+      <!-- Login View -->
+      <section id="login-view" class="hidden">
+        <div class="login-card">
+          <span class="material-symbols-outlined login-card__icon">account_balance_wallet</span>
+          <h1 class="login-card__title">Sign in to KiShop</h1>
+          <form id="login-form">
+            <div class="login-card__field">
+              <label class="login-card__label" for="login-username">Username</label>
+              <input type="text" id="login-username" class="login-card__input" autocomplete="username" required>
+            </div>
+            <div class="login-card__field">
+              <label class="login-card__label" for="login-password">Password</label>
+              <input type="password" id="login-password" class="login-card__input" autocomplete="current-password" required>
+            </div>
+            <div class="login-card__error hidden" id="login-error"></div>
+            <button type="submit" class="login-card__submit" id="login-submit">Sign In</button>
+          </form>
+        </div>
+      </section>
       
       <!-- Budget Tracker View -->
       <section id="budget-tracker-view">
@@ -116,6 +149,46 @@
         </section>
       </section>
 
+      <!-- Admin Panel View -->
+      <section id="admin-view" class="hidden">
+        <section class="shopping-list-section mb-6">
+          <div class="shopping-list__section-header">
+            <h2 class="shopping-list__section-title">Add User</h2>
+          </div>
+          <form class="admin-add-user" id="admin-add-user-form">
+            <div class="admin-add-user__field">
+              <label class="admin-add-user__label" for="admin-new-username">Username</label>
+              <input type="text" id="admin-new-username" class="admin-add-user__input" autocomplete="off">
+            </div>
+            <div class="admin-add-user__field">
+              <label class="admin-add-user__label" for="admin-new-password">Password</label>
+              <input type="password" id="admin-new-password" class="admin-add-user__input" autocomplete="new-password">
+            </div>
+            <div class="admin-add-user__field">
+              <label class="admin-add-user__label" for="admin-new-role">Role</label>
+              <select id="admin-new-role" class="admin-add-user__input">
+                <option value="user" selected>User</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <button type="submit" class="admin-add-user__submit">
+              <span class="material-symbols-outlined material-symbols-outlined--filled">person_add</span>
+              Create User
+            </button>
+          </form>
+          <div class="admin-message hidden" id="admin-form-error"></div>
+        </section>
+
+        <section class="shopping-list-section">
+          <div class="shopping-list__section-header">
+            <h2 class="shopping-list__section-title">Users</h2>
+            <span class="shopping-list__section-count" id="admin-user-count">0 USERS</span>
+          </div>
+          <div class="admin-message hidden" id="admin-list-error"></div>
+          <div id="admin-users-list"></div>
+        </section>
+      </section>
+
       <!-- Shopping List View -->
       <section id="shopping-list-view" class="hidden">
         <!-- Filter Chips -->
@@ -151,6 +224,25 @@
 
     </main>
 
+    <!-- Reset Password Dialog -->
+    <div class="modal-overlay hidden" id="reset-password-overlay">
+      <div class="modal">
+        <h2 class="modal__title">Reset Password</h2>
+        <p class="modal__subtitle" id="reset-password-username"></p>
+        <form id="reset-password-form">
+          <div class="login-card__field">
+            <label class="login-card__label" for="reset-password-input">New Password</label>
+            <input type="password" id="reset-password-input" class="login-card__input" autocomplete="new-password">
+          </div>
+          <div class="login-card__error hidden" id="reset-password-error"></div>
+          <div class="modal__actions">
+            <button type="button" class="modal__btn modal__btn--secondary" id="reset-password-cancel">Cancel</button>
+            <button type="submit" class="modal__btn modal__btn--primary">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- Floating Quick Add Bar (Shopping List View) -->
     <div class="quick-add-bar hidden" id="quick-add-bar">
       <input type="text" class="quick-add-bar__input" id="quick-add-input" placeholder="Add new item...">
@@ -172,6 +264,6 @@
     </nav>
   </div>
 
-  <script src="app.js?v=2"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>

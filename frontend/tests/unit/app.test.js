@@ -318,8 +318,9 @@ describe('View Persistence', () => {
       fs.readFileSync('app.js', 'utf-8')
     );
 
-    // init() must restore the persisted view so refresh stays on the same view
-    expect(appContent).toMatch(/function init\(\)[\s\S]*?localStorage\.getItem\(VIEW_STORAGE_KEY\)[\s\S]*?switchView\(savedView\)/);
+    // showAppView must restore the persisted view so refresh stays on the same
+    // view (runs after the session check in init())
+    expect(appContent).toMatch(/function showAppView\(user\)[\s\S]*?localStorage\.getItem\(VIEW_STORAGE_KEY\)[\s\S]*?switchView\(/);
   });
 
   it('should default to the budget tracker view when nothing is saved', () => {
