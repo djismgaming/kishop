@@ -968,6 +968,15 @@ h1, h2, h3, h4, h5, h6 {
   text-align: center;
 }
 
+/* Actions (qty controls + delete) — grouped so they can move to their own
+   row on narrow/portrait screens without clipping the item name. */
+.list-item-card__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  flex-shrink: 0;
+}
+
 /* Delete Button */
 .list-item-card__delete {
   width: 36px;
@@ -1292,6 +1301,22 @@ h1, h2, h3, h4, h5, h6 {
 
   .quick-add-bar {
     bottom: calc(96px + env(safe-area-inset-bottom, 0));
+  }
+}
+
+/* Portrait phones (< 600px wide): the qty/delete buttons on the right used to
+   squeeze the item name, clipping long names. Drop the actions onto their own
+   row below the name so it gets the full width. Landscape (>= 600px) is
+   unaffected and keeps the buttons inline on the right. */
+@media (max-width: 600px) {
+  .list-item-card:has(> .list-item-card__actions) {
+    flex-wrap: wrap;
+  }
+
+  .list-item-card__actions {
+    flex-basis: 100%;
+    justify-content: flex-end;
+    margin-top: var(--spacing-2);
   }
 }
 
