@@ -759,18 +759,20 @@ function createListItemElement(item, index) {
         <input type="text" class="list-item-card__name-input" value="${escapeHTML(name)}" placeholder="Item name"/>
       </div>
     </div>
-    <div class="list-item-card__qty-controls">
-      <button class="list-item-card__qty-btn" data-action="decrease" aria-label="Decrease quantity">
-        <span class="material-symbols-outlined">remove</span>
-      </button>
-      <span class="list-item-card__qty-value">${quantity}</span>
-      <button class="list-item-card__qty-btn" data-action="increase" aria-label="Increase quantity">
-        <span class="material-symbols-outlined">add</span>
+    <div class="list-item-card__actions">
+      <div class="list-item-card__qty-controls">
+        <button class="list-item-card__qty-btn" data-action="decrease" aria-label="Decrease quantity">
+          <span class="material-symbols-outlined">remove</span>
+        </button>
+        <span class="list-item-card__qty-value">${quantity}</span>
+        <button class="list-item-card__qty-btn" data-action="increase" aria-label="Increase quantity">
+          <span class="material-symbols-outlined">add</span>
+        </button>
+      </div>
+      <button class="list-item-card__delete" aria-label="Delete item" ${item.completed ? 'disabled' : ''}>
+        <span class="material-symbols-outlined">delete</span>
       </button>
     </div>
-    <button class="list-item-card__delete" aria-label="Delete item" ${item.completed ? 'disabled' : ''}>
-      <span class="material-symbols-outlined">delete</span>
-    </button>
   `;
 
   const checkbox = div.querySelector('.list-item-card__checkbox');
