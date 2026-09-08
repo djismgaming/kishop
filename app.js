@@ -893,6 +893,34 @@ function addItemToList() {
 }
 
 // ==========================================================================
+// Multi-line entry
+// Pasting (or typing) several lines at once adds one item per line, so a
+// list copied from a text message lands in the shopping list as-is.
+// ==========================================================================
+
+/**
+ * Split pasted/entered text into the individual item names to create.
+ * @param {string} text - Raw text, possibly containing several lines
+ * @returns {string[]} - Trimmed, non-empty item names in order
+ */
+function parseMultiLineItems(text) {
+  return (text || '')
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(name => name !== '');
+}
+
+function addListItems(names) {
+  const items = names
+    .map(name => ({ name, quantity: '1', completed: false, price: '' }));
+  appData.listItems.push(...items);
+  renderActiveItems();
+  renderCompletedItems();
+  items.forEach(saveNewListItem);
+  return items;
+}
+
+// ==========================================================================
 // View Management
 // ==========================================================================
 
@@ -1069,12 +1097,9 @@ function setupEventListeners() {
 
   if (quickAddInput && quickAddSubmit) {
     quickAddSubmit.addEventListener('click', () => {
-      const name = quickAddInput.value.trim();
-      if (name) {
-        const item = { name, quantity: '1', completed: false, price: '' };
-        appData.listItems.push(item);
-        renderActiveItems();
-        saveNewListItem(item);
+      const names = parseMultiLineItems(quickAddInput.value);
+      if (names.length > 0) {
+        addListItems(names);
         quickAddInput.value = '';
         quickAddInput.focus();
       }
@@ -1083,6 +1108,18 @@ function setupEventListeners() {
     quickAddInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         quickAddSubmit.click();
+      }
+    });
+
+    // Pasting multiple lines (e.g. a shopping list copied from a text
+    // message) adds one item per non-empty line.
+    quickAddInput.addEventListener('paste', (e) => {
+      const names = parseMultiLineItems(e.clipboardData?.getData('text'));
+      if (names.length > 1) {
+        e.preventDefault();
+        addListItems(names);
+        quickAddInput.value = '';
+        quickAddInput.focus();
       }
     });
   }
@@ -1271,3 +1308,8 @@ async function init() {
 
 // Start the app
 document.addEventListener('DOMContentLoaded', init);
+
+// Exported for unit tests only; has no effect in the browser.
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { parseMultiLineItems, addListItems };
+}
