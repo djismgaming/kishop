@@ -10,6 +10,7 @@ A mobile-first web app for managing shopping lists with tax-aware totals and tra
 - **Shopping List**: Add items with names and quantities; mark items as completed
 - **Filter Chips**: Sort shopping list items by Recently Added, A-Z, or By Quantity
 - **Quick Add Bar**: Floating input bar for fast item entry in the Shopping List view
+- **Multi-line Entry**: Paste several lines (e.g. a list copied from a text message) into the Quick Add bar to add one item per line
 - **Dark/Light Theme**: Toggle between light and dark modes (preference saved locally)
 - **Mobile Optimized**: Numeric inputs trigger numpad keyboard on mobile devices (`inputmode="decimal"` / `inputmode="numeric"`)
 - **Real-time Calculations**: Automatic subtotals, tax (11.5%), and grand totals
@@ -31,7 +32,7 @@ A mobile-first web app for managing shopping lists with tax-aware totals and tra
 
 ### Shopping List View
 1. Switch to the Shopping List tab using the bottom navigation
-2. Use the **Quick Add** bar to add items by name
+2. Use the **Quick Add** bar to add items by name — one per line, or paste a whole list (e.g. from a text message) to add every line at once
 3. Edit item names and quantities inline
 4. Check items off as you shop (they move to the Completed section)
 5. Filter items using the chip bar (Recently Added, A-Z, By Quantity)
